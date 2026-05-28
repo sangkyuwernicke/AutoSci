@@ -71,6 +71,10 @@ concepts:
 concepts:
   - slug: multi-agent-collaboration
   - slug: emergent-agent-behaviors
+  - slug: quantagent-price-driven-multi-agent-llms
+
+concepts:
+  - slug: high-frequency-trading-llms
 
 topics:
 
@@ -105,6 +109,7 @@ methods:
   - slug: role-based-multi-ai-agent-stock
   - slug: rag-multi-agent-stock-analysis
   - slug: agentverse-framework
+  - slug: quantagent-multi-agent-trading-system
 
 experiments:
 
