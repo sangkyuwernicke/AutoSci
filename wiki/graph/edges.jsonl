@@ -1,0 +1,2 @@
+{"from": "papers/metoformer-hq-multi-scale-horizon-adaptive", "to": "concepts/metocean-forecasting", "type": "uses_concept", "evidence": "MetoFormer-HQ is an application for multivariate metocean forecasting using Korean coastal buoy data", "date": "2026-05-28", "confidence": "high"}
+{"from": "papers/metoformer-hq-multi-scale-horizon-adaptive", "to": "concepts/metocean-forecasting", "type": "introduces_concept", "evidence": "MetoFormer-HQ applies and advances metocean forecasting with three new architectural components", "date": "2026-05-28", "confidence": "medium"}
