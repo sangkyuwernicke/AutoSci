@@ -91,6 +91,12 @@ concepts:
 
 concepts:
   - slug: llm-multi-agent-financial-trading
+  - slug: agentverse-facilitating-multi-agent-collaboration-exploring
+
+concepts:
+  - slug: multi-agent-collaboration
+  - slug: expert-recruitment
+  - slug: emergent-agent-behaviors
 
 topics:
 
@@ -129,6 +135,7 @@ methods:
   - slug: cot-based-llm-etf-allocation-framework
   - slug: rag-financial-qa
   - slug: tradingagents-framework
+  - slug: agentverse-framework
 
 experiments:
 

@@ -2,62 +2,40 @@
 title: "Multi-Agent Collaboration"
 aliases:
   - multi-agent system
-  - multi-agent group
-  - LLM multi-agent cooperation
+  - MAS
+  - agent cooperation
+  - multi-agent cooperation
 tags:
   - multi-agent-systems
   - llm-agents
   - collaboration
+  - autonomous-agents
 maturity: active
-definition: "A paradigm in which multiple LLM-powered autonomous agents, each assigned distinct roles or expertise, cooperate through structured communication and shared task execution to accomplish goals that exceed the capability of any single agent."
+definition: "A paradigm in which multiple autonomous agents work together — sharing information, distributing subtasks, and collectively making decisions — to accomplish goals that are difficult or impossible for a single agent to achieve alone. In LLM-based systems, collaboration is typically structured through communication protocols (horizontal or vertical), role assignment, and shared evaluation."
 key_papers:
   - "[[agentverse-facilitating-multi-agent-collaboration-exploring]]"
-first_introduced: "2023"
+first_introduced: "Multi-agent systems research predates LLMs; LLM-based collaborative agents emerged prominently in 2023."
 date_updated: 2026-05-29
 related_concepts:
+  - "[[expert-recruitment]]"
   - "[[emergent-agent-behaviors]]"
 ---
 
 ## Definition
 
-Multi-agent collaboration refers to orchestrating two or more LLM-based agents to work jointly on a shared task. Agents may have differentiated roles (e.g., solver vs. reviewer, or domain experts), communicate through structured protocols (debate, deliberation, code review), and collectively produce outputs that surpass what a single agent can achieve.
+Multi-agent collaboration refers to structured cooperation among multiple autonomous agents to jointly solve complex tasks. Each agent may have a distinct role, capability, or knowledge domain, and agents communicate to synthesize a collective decision or action. In LLM-based settings, collaboration emerges from prompt-driven role assignment and iterative discussion protocols.
 
-## Intuition
+## Key properties
 
-Inspired by human teamwork: diversity of expertise, checks-and-balances through peer review, and parallel execution of sub-tasks each contribute to superior outcomes. The group is greater than the sum of its parts when agents have complementary capabilities and robust error-correction mechanisms.
+- **Role diversity**: Agents are assigned or self-assign distinct roles (solver, reviewer, recruiter) that partition the problem space.
+- **Communication structure**: Collaboration is organized via horizontal (democratic, all-agents) or vertical (hierarchical, solver + reviewers) communication topologies.
+- **Iterative refinement**: Multi-round deliberation allows agents to correct each other's errors and converge on higher-quality outputs.
+- **Emergent behaviors**: Interaction among agents can produce unplanned behaviors — both beneficial (volunteer, conformity) and harmful (destructive).
 
-## Variants
+## Key papers
 
-- **Static role assignment**: roles fixed at initialization (e.g., a fixed debater pair).
-- **Dynamic role assignment**: roles determined or adjusted during the task based on progress (e.g., AgentVerse's expert recruitment).
-- **Horizontal communication**: democratic peer-to-peer deliberation; group decision by consensus.
-- **Vertical communication**: hierarchical; one solver, others as reviewers or critics.
-- **Debate / argumentation**: agents argue multiple positions to reach a stronger conclusion.
-
-## Comparison
-
-Compared to single-agent CoT: collaboration introduces peer correction but also susceptibility to erroneous peer influence. More powerful base models (GPT-4 vs. GPT-3.5) are significantly more resilient to erroneous feedback during collaboration.
-
-## Known limitations
-
-- Weaker models can be misled by incorrect peer feedback, degrading performance below single-agent baselines.
-- Higher API cost proportional to agent count and deliberation rounds.
-- Communication overhead can slow convergence on time-sensitive tasks.
-
-## Open problems
-
-- Robust inter-agent disagreement resolution without groupthink or error propagation.
-- Efficient orchestration of large agent pools (>10 agents).
-- Principled communication structure selection across task types.
-
-## Relationship to foundations
-
-Draws on distributed AI, collective intelligence theory, and multi-agent reinforcement learning foundations.
+- [[agentverse-facilitating-multi-agent-collaboration-exploring]] — proposes AgentVerse as a general multi-agent framework with dynamic composition and structured deliberation; demonstrates emergent collaborative behaviors.
 
 ## Realized by
 
 - [[agentverse-framework]]
-
-## My understanding
-
-The key open question is when to use horizontal vs. vertical communication. AgentVerse provides empirical guidance (horizontal for open-ended tasks, vertical for tasks requiring a single refined answer), but a principled theory is lacking.

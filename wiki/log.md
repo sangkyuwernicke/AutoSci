@@ -25,3 +25,4 @@
 ## [2026-05-28] ingest | added papers/evidence-field-experiment-human-ai-collaboration | updated: concepts/human-loop-ai-services, graph/edges.jsonl, index.md
 ## [2026-05-28] ingest | added papers/research-building-system-improve-financial-literacy | updated: concepts/retrieval-augmented-generation, methods/rag-financial-qa
 ## [2026-05-28] ingest | added papers/tradingagents-multi-agents-llm-financial-trading | updated: concepts/llm-multi-agent-financial-trading, methods/tradingagents-framework, graph/edges.jsonl, index.md
+## [2026-05-28] ingest | added papers/agentverse-facilitating-multi-agent-collaboration-exploring | updated: concepts/multi-agent-collaboration, concepts/expert-recruitment, concepts/emergent-agent-behaviors, methods/agentverse-framework, people/weize-chen, people/zhiyuan-liu
