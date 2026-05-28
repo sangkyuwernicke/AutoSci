@@ -112,6 +112,10 @@ concepts:
 
 concepts:
   - slug: ai-augmented-organization
+  - slug: chatcollab-exploring-collaboration-between-humans-ai
+
+concepts:
+  - slug: human-ai-collaborative-teaming
 
 topics:
 
@@ -155,6 +159,7 @@ methods:
   - slug: agentverse-framework
   - slug: pairit
   - slug: persona-based-llm-trading-simulation
+  - slug: llm-based-collaboration-analysis
 
 experiments:
 

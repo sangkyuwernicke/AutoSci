@@ -29,3 +29,4 @@
 ## [2026-05-28] ingest | added papers/collaborating-ai-agents-field-experiment-teamwork | updated: concepts/human-ai-collaboration, concepts/jagged-frontier, concepts/diversity-collapse, concepts/delegation-workflow, methods/pairit, people/harang-ju, people/sinan-aral
 ## [2026-05-28] ingest | added papers/persona-driven-llm-interaction-stock-market | updated: concepts/persona-driven-prompting, methods/persona-based-llm-trading-simulation, index.md
 ## [2026-05-28] ingest | added papers/ai-augmented-organization-design-limitations-collaboration | updated: concepts/ai-augmented-organization, wiki/index.md
+## [2026-05-28] ingest | added papers/chatcollab-exploring-collaboration-between-humans-ai | updated: concepts/human-ai-collaborative-teaming, methods/llm-based-collaboration-analysis, graph/edges.jsonl, index.md
