@@ -1,0 +1,1 @@
+{"from": "papers/research-building-system-improve-financial-literacy", "to": "concepts/retrieval-augmented-generation", "type": "uses_concept", "evidence": "The entire system is built on RAG: FAISS-indexed dense retrieval feeds retrieved documents into LLM prompts for grounded financial Q&A generation", "date": "2026-05-28", "confidence": "high"}
