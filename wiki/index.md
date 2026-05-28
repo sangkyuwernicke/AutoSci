@@ -28,6 +28,12 @@ concepts:
 
 concepts:
   - slug: agent-autonomy-levels
+  - slug: large-language-model-based-multi-agents
+
+concepts:
+  - slug: llm-based-multi-agent-systems
+  - slug: agent-communication
+  - slug: agent-capability-acquisition
 
 topics:
 
@@ -36,6 +42,7 @@ people:
   - slug: abdullah-almaatouq
   - slug: thomas-malone
   - slug: johannes-schneider
+  - slug: xiangliang-zhang
 
 ideas:
 
@@ -45,6 +52,7 @@ methods:
   - slug: assertion-based-benchmarking
   - slug: tree-thoughts
   - slug: llm-ai-planning-hybrid
+  - slug: llm-ma-taxonomy
 
 experiments:
 

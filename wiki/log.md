@@ -10,3 +10,4 @@
 ## [2026-05-28] ingest | added papers/factors-influencing-human-ai-collaboration-scoping | updated: concepts/human-ai-collaboration, index.md
 ## [2026-05-28] ingest | added papers/generative-agentic-ai-survey-conceptualization-challenges | updated: concepts/agentic-ai, concepts/chain-thought-reasoning, concepts/retrieval-augmented-generation, methods/tree-thoughts, people/johannes-schneider
 ## [2026-05-28] ingest | added papers/generative-ai-agents-knowledge-work-augmentation | updated: concepts/agent-autonomy-levels, methods/llm-ai-planning-hybrid
+## [2026-05-28] ingest | added papers/large-language-model-based-multi-agents | updated: concepts/llm-based-multi-agent-systems, concepts/agent-communication, concepts/agent-capability-acquisition, methods/llm-ma-taxonomy, people/xiangliang-zhang
