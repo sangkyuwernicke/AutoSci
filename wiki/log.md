@@ -30,3 +30,4 @@
 ## [2026-05-28] ingest | added papers/persona-driven-llm-interaction-stock-market | updated: concepts/persona-driven-prompting, methods/persona-based-llm-trading-simulation, index.md
 ## [2026-05-28] ingest | added papers/ai-augmented-organization-design-limitations-collaboration | updated: concepts/ai-augmented-organization, wiki/index.md
 ## [2026-05-28] ingest | added papers/chatcollab-exploring-collaboration-between-humans-ai | updated: concepts/human-ai-collaborative-teaming, methods/llm-based-collaboration-analysis, graph/edges.jsonl, index.md
+## [2026-05-28] ingest | added papers/optimizing-human-ai-collaboration-effects-motivation | updated: concepts/trust-calibration-human-ai-collaboration, wiki/index.md

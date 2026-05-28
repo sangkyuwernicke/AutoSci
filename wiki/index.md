@@ -116,6 +116,10 @@ concepts:
 
 concepts:
   - slug: human-ai-collaborative-teaming
+  - slug: optimizing-human-ai-collaboration-effects-motivation
+
+concepts:
+  - slug: trust-calibration-human-ai-collaboration
 
 topics:
 
