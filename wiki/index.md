@@ -83,6 +83,10 @@ concepts:
 
 concepts:
   - slug: human-loop-ai-services
+  - slug: research-building-system-improve-financial-literacy
+
+concepts:
+  - slug: retrieval-augmented-generation
 
 topics:
 
@@ -119,6 +123,7 @@ methods:
   - slug: agentverse-framework
   - slug: quantagent-multi-agent-trading-system
   - slug: cot-based-llm-etf-allocation-framework
+  - slug: rag-financial-qa
 
 experiments:
 

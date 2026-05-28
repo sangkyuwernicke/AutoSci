@@ -23,3 +23,4 @@
 ## [2026-05-28] ingest | added papers/etf-asset-allocation-strategy-using-chatgpt | updated: concepts/chain-thought-prompting-financial-text-analysis, methods/cot-based-llm-etf-allocation-framework
 ## [2026-05-28] ingest | added papers/etf-asset-allocation-strategy-using-chatgpt | updated: concepts/chain-thought-prompting-financial-text-analysis, methods/cot-based-llm-etf-allocation-framework
 ## [2026-05-28] ingest | added papers/evidence-field-experiment-human-ai-collaboration | updated: concepts/human-loop-ai-services, graph/edges.jsonl, index.md
+## [2026-05-28] ingest | added papers/research-building-system-improve-financial-literacy | updated: concepts/retrieval-augmented-generation, methods/rag-financial-qa
