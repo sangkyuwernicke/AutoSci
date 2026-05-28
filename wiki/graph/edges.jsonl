@@ -1,0 +1,1 @@
+{"from": "papers/quantagent-price-driven-multi-agent-llms", "to": "concepts/high-frequency-trading-llms", "type": "introduces_concept", "evidence": "QuantAgent is the first multi-agent LLM framework explicitly designed for high-frequency algorithmic trading, operating solely on OHLC price data", "date": "2026-05-28", "confidence": "high"}
