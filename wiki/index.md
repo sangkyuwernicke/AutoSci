@@ -48,6 +48,10 @@ concepts:
 concepts:
   - slug: information-asymmetry-multi-agent-systems
   - slug: informative-multi-agent-system
+  - slug: slm-mod-small-language-models-surpass
+
+concepts:
+  - slug: community-specific-content-moderation
 
 topics:
 
@@ -72,6 +76,7 @@ methods:
   - slug: horizon-adaptive-decoding
   - slug: three-level-meta-analytic-model
   - slug: infonav
+  - slug: lora-fine-tuning-content-moderation
 
 experiments:
 
