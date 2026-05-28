@@ -24,6 +24,10 @@ concepts:
   - slug: agentic-ai
   - slug: chain-thought-reasoning
   - slug: retrieval-augmented-generation
+  - slug: generative-ai-agents-knowledge-work-augmentation
+
+concepts:
+  - slug: agent-autonomy-levels
 
 topics:
 
@@ -40,6 +44,7 @@ methods:
   - slug: three-level-meta-analytic-model
   - slug: assertion-based-benchmarking
   - slug: tree-thoughts
+  - slug: llm-ai-planning-hybrid
 
 experiments:
 
