@@ -58,6 +58,10 @@ concepts:
   - slug: vision-language-alignment
   - slug: multimodal-large-language-model
   - slug: two-stage-vision-language-pretraining
+  - slug: study-explainable-gpt-based-stock-investment
+
+concepts:
+  - slug: retrieval-augmented-generation
 
 topics:
 
@@ -87,6 +91,7 @@ methods:
   - slug: infonav
   - slug: lora-fine-tuning-content-moderation
   - slug: minigpt-projection-alignment
+  - slug: role-based-multi-ai-agent-stock
 
 experiments:
 
