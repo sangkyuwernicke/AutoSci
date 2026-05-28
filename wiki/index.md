@@ -120,6 +120,11 @@ concepts:
 
 concepts:
   - slug: trust-calibration-human-ai-collaboration
+  - slug: scaling-large-language-model-based-multi
+
+concepts:
+  - slug: collaborative-scaling-law
+  - slug: multi-agent-collaboration-network
 
 topics:
 
@@ -138,6 +143,9 @@ people:
   - slug: zhiyuan-liu
   - slug: harang-ju
   - slug: sinan-aral
+  - slug: chen-qian
+  - slug: zhiyuan-liu
+  - slug: maosong-sun
 
 ideas:
 
@@ -164,6 +172,7 @@ methods:
   - slug: pairit
   - slug: persona-based-llm-trading-simulation
   - slug: llm-based-collaboration-analysis
+  - slug: macnet-multi-agent-collaboration-network
 
 experiments:
 
