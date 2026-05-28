@@ -66,6 +66,11 @@ concepts:
 
 concepts:
   - slug: explainable-ai-stock-investment-analysis
+  - slug: agentverse-facilitating-multi-agent-collaboration-exploring
+
+concepts:
+  - slug: multi-agent-collaboration
+  - slug: emergent-agent-behaviors
 
 topics:
 
@@ -80,6 +85,8 @@ people:
   - slug: deyao-zhu
   - slug: jun-chen
   - slug: mohamed-elhoseiny
+  - slug: weize-chen
+  - slug: zhiyuan-liu
 
 ideas:
 
@@ -97,6 +104,7 @@ methods:
   - slug: minigpt-projection-alignment
   - slug: role-based-multi-ai-agent-stock
   - slug: rag-multi-agent-stock-analysis
+  - slug: agentverse-framework
 
 experiments:
 

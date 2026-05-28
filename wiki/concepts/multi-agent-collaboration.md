@@ -1,70 +1,63 @@
 ---
-title: Multi-Agent Collaboration
+title: "Multi-Agent Collaboration"
 aliases:
-  - MAC
-  - multi-agent systems
-  - MAS
-  - multi-agent LLM systems
+  - multi-agent system
+  - multi-agent group
+  - LLM multi-agent cooperation
 tags:
   - multi-agent-systems
   - llm-agents
-  - agent-coordination
+  - collaboration
 maturity: active
-definition: A paradigm in which multiple LLM-powered agents with distinct specializations communicate and coordinate to solve complex tasks that exceed the capability of any single agent.
+definition: "A paradigm in which multiple LLM-powered autonomous agents, each assigned distinct roles or expertise, cooperate through structured communication and shared task execution to accomplish goals that exceed the capability of any single agent."
 key_papers:
-  - "[[towards-effective-genai-multi-agent-collaboration]]"
-first_introduced: "1980s (classical MAS); LLM-era resurgence circa 2023"
-date_updated: 2026-05-28
-related_concepts: []
-linked_ideas: []
+  - "[[agentverse-facilitating-multi-agent-collaboration-exploring]]"
+first_introduced: "2023"
+date_updated: 2026-05-29
+related_concepts:
+  - "[[emergent-agent-behaviors]]"
 ---
 
 ## Definition
 
-Multi-agent collaboration (MAC) refers to systems where multiple autonomous AI agents—each with specialized roles, tools, and instructions—communicate via defined protocols to jointly accomplish a goal. In the LLM era, agents are powered by large language models and use function-calling or prompting to interact. The "collaborative assumption" holds that agents are motivated to achieve shared or compatible goals rather than competing individually.
+Multi-agent collaboration refers to orchestrating two or more LLM-based agents to work jointly on a shared task. Agents may have differentiated roles (e.g., solver vs. reviewer, or domain experts), communicate through structured protocols (debate, deliberation, code review), and collectively produce outputs that surpass what a single agent can achieve.
 
 ## Intuition
 
-A single LLM agent has a limited context window and must manage many competing instructions simultaneously, leading to hallucinations and tool-call errors on complex tasks. By decomposing the task space and assigning each agent a focused specialty, MAC systems can maintain higher reliability, reduce per-agent instruction overload, and parallelize sub-tasks. The supervisor agent handles orchestration; specialist agents handle execution within their domain.
+Inspired by human teamwork: diversity of expertise, checks-and-balances through peer review, and parallel execution of sub-tasks each contribute to superior outcomes. The group is greater than the sum of its parts when agents have complementary capabilities and robust error-correction mechanisms.
 
 ## Variants
 
-- **Centralized hierarchy (hierarchical agents)**: A root supervisor agent delegates to leaf specialists in a tree topology. The supervisor is responsible for planning, task assignment, and aggregation. Specialists focus on narrow sub-tasks. (This is the design studied in [[towards-effective-genai-multi-agent-collaboration]].)
-- **Decentralized hierarchy**: Agents self-organize without a central authority (e.g., MAD, Generative Agents).
-- **Sequential workflow**: Each agent processes output from the previous agent in a pipeline (e.g., CrewAI, LangGraph).
-- **Peer-to-peer collaboration**: Agents negotiate directly (e.g., CAMEL inception prompting).
+- **Static role assignment**: roles fixed at initialization (e.g., a fixed debater pair).
+- **Dynamic role assignment**: roles determined or adjusted during the task based on progress (e.g., AgentVerse's expert recruitment).
+- **Horizontal communication**: democratic peer-to-peer deliberation; group decision by consensus.
+- **Vertical communication**: hierarchical; one solver, others as reviewers or critics.
+- **Debate / argumentation**: agents argue multiple positions to reach a stronger conclusion.
 
 ## Comparison
 
-| Property | Centralized MAC | Decentralized MAC | Single Agent |
-|---|---|---|---|
-| Task decomposition | Supervisor | Self-organized | Monolithic |
-| Specialization | High | Medium | Low |
-| Orchestration overhead | Medium | Low | None |
-| Fault isolation | Good | Variable | Poor |
+Compared to single-agent CoT: collaboration introduces peer correction but also susceptibility to erroneous peer influence. More powerful base models (GPT-4 vs. GPT-3.5) are significantly more resilient to erroneous feedback during collaboration.
 
 ## Known limitations
 
-- Orchestration latency accumulates with each inter-agent round trip.
-- Supervisor agent can become a bottleneck and hallucinate routing decisions.
-- Multi-agent evaluation is harder than single-agent evaluation due to combinatorially many valid trajectories.
-- Context management across long multi-party conversations remains challenging.
+- Weaker models can be misled by incorrect peer feedback, degrading performance below single-agent baselines.
+- Higher API cost proportional to agent count and deliberation rounds.
+- Communication overhead can slow convergence on time-sensitive tasks.
 
 ## Open problems
 
-- How to automatically select the optimal team size and hierarchy depth for a given task.
-- Asynchronous communication protocols that allow agents to proceed without blocking.
-- Formal methods for verifying agent coordination correctness.
+- Robust inter-agent disagreement resolution without groupthink or error propagation.
+- Efficient orchestration of large agent pools (>10 agents).
+- Principled communication structure selection across task types.
 
 ## Relationship to foundations
 
-Draws on classical distributed systems (message passing, fault tolerance), game theory (mechanism design, coordination), and cognitive science (team cognition, division of labor).
+Draws on distributed AI, collective intelligence theory, and multi-agent reinforcement learning foundations.
 
 ## Realized by
 
-- [[assertion-based-benchmarking]] — evaluation methodology for MAC systems
-- [[dynamic-agent-routing]] — optimization technique for reducing MAC orchestration overhead
+- [[agentverse-framework]]
 
 ## My understanding
 
-MAC is the central architectural paradigm of the AWS Bedrock multi-agent framework evaluated in [[towards-effective-genai-multi-agent-collaboration]]. The empirical result that MAC achieves up to 70% relative improvement over single-agent baselines in Software Development validates the specialization hypothesis.
+The key open question is when to use horizontal vs. vertical communication. AgentVerse provides empirical guidance (horizontal for open-ended tasks, vertical for tasks requiring a single refined answer), but a principled theory is lacking.
