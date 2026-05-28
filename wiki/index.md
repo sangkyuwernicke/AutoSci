@@ -104,6 +104,10 @@ concepts:
   - slug: jagged-frontier
   - slug: diversity-collapse
   - slug: delegation-workflow
+  - slug: persona-driven-llm-interaction-stock-market
+
+concepts:
+  - slug: persona-driven-prompting
 
 topics:
 
@@ -146,6 +150,7 @@ methods:
   - slug: tradingagents-framework
   - slug: agentverse-framework
   - slug: pairit
+  - slug: persona-based-llm-trading-simulation
 
 experiments:
 
