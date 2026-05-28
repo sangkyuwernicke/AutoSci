@@ -34,6 +34,10 @@ concepts:
   - slug: llm-based-multi-agent-systems
   - slug: agent-communication
   - slug: agent-capability-acquisition
+  - slug: metoformer-hq-multi-scale-horizon-adaptive
+
+concepts:
+  - slug: metocean-forecasting
 
 topics:
 
@@ -53,6 +57,7 @@ methods:
   - slug: tree-thoughts
   - slug: llm-ai-planning-hybrid
   - slug: llm-ma-taxonomy
+  - slug: horizon-adaptive-decoding
 
 experiments:
 

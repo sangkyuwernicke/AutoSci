@@ -11,3 +11,4 @@
 ## [2026-05-28] ingest | added papers/generative-agentic-ai-survey-conceptualization-challenges | updated: concepts/agentic-ai, concepts/chain-thought-reasoning, concepts/retrieval-augmented-generation, methods/tree-thoughts, people/johannes-schneider
 ## [2026-05-28] ingest | added papers/generative-ai-agents-knowledge-work-augmentation | updated: concepts/agent-autonomy-levels, methods/llm-ai-planning-hybrid
 ## [2026-05-28] ingest | added papers/large-language-model-based-multi-agents | updated: concepts/llm-based-multi-agent-systems, concepts/agent-communication, concepts/agent-capability-acquisition, methods/llm-ma-taxonomy, people/xiangliang-zhang
+## [2026-05-28] ingest | added papers/metoformer-hq-multi-scale-horizon-adaptive | updated: concepts/metocean-forecasting, methods/horizon-adaptive-decoding
