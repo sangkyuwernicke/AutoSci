@@ -2,22 +2,25 @@
 name: "Michelle Vaccaro"
 affiliation: "MIT Center for Collective Intelligence; Institute for Data, Systems, and Society, MIT"
 research_areas:
-  - human-ai-collaboration
-  - collective-intelligence
+  - human-AI collaboration
+  - collective intelligence
   - meta-analysis
-date_updated: 2026-05-28
+  - decision-making
+homepage: ""
+scholar: ""
+date_updated: 2026-05-29
 type:
   kind: researcher
 ---
 
 ## Research areas
 
-Human–AI collaboration, collective intelligence, experimental social science, quantitative research synthesis.
+Human-AI collaboration, collective intelligence, experimental methods for evaluating human-AI systems.
 
 ## Recent work
 
-- [[when-combinations-humans-ai-useful-systematic]] — systematic review and meta-analysis of human–AI synergy across 106 experiments
+- [[when-combinations-humans-ai-useful]] — Lead author of pre-registered systematic review and meta-analysis of when human-AI combinations outperform humans or AI alone.
 
 ## My notes
 
-PhD student at MIT (Sloan + IDSS). First author of the landmark 2024 Nature Human Behaviour meta-analysis on human–AI combinations.
+Corresponding author (vaccaro@mit.edu). Conceived the study with feedback from Almaatouq and Malone. Conducted data collection and statistical analysis.

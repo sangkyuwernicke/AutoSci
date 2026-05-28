@@ -38,6 +38,11 @@ concepts:
 
 concepts:
   - slug: metocean-forecasting
+  - slug: when-combinations-humans-ai-useful
+
+concepts:
+  - slug: human-ai-synergy
+  - slug: human-augmentation
 
 topics:
 
@@ -58,6 +63,7 @@ methods:
   - slug: llm-ai-planning-hybrid
   - slug: llm-ma-taxonomy
   - slug: horizon-adaptive-decoding
+  - slug: three-level-meta-analytic-model
 
 experiments:
 

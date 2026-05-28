@@ -1,67 +1,64 @@
 ---
-title: "Human–AI Synergy"
+title: "Human-AI Synergy"
 aliases:
-  - human-AI synergy
+  - strong human-AI synergy
   - human-AI complementarity
-  - strong human-AI complementarity
+  - human AI synergy
 tags:
-  - human-ai-collaboration
-  - performance-evaluation
-  - collective-intelligence
+  - human-AI collaboration
+  - performance evaluation
+  - collective intelligence
 maturity: active
-definition: "The condition in which a human–AI combined system outperforms the better of the human alone and the AI alone on the same task."
+definition: "The condition where a human-AI combination outperforms both the human alone and the AI alone — analogous to strong synergy in human groups."
 key_papers:
-  - "[[when-combinations-humans-ai-useful-systematic]]"
-first_introduced: "2024"
-date_updated: 2026-05-28
+  - "[[when-combinations-humans-ai-useful]]"
+first_introduced: "Vaccaro et al. 2024 (arXiv 2405.06087)"
+date_updated: 2026-05-29
 related_concepts:
   - "[[human-augmentation]]"
 ---
 
 ## Definition
 
-Human–AI synergy occurs when a combined human–AI system achieves performance *strictly exceeding* the maximum of what either the human alone or the AI alone can achieve. This is analogous to "strong synergy" in human group research: the group outperforms its best member. Contrast with **human augmentation**, where the combined system merely beats the human alone (a weaker criterion that an AI working alone might also satisfy).
+Human-AI synergy (also called strong synergy) occurs when the combination of a human agent and an AI system achieves performance that exceeds **both** the human working alone **and** the AI working alone. The term is drawn by analogy from the collective intelligence literature on human teams, where "strong synergy" means the group outperforms its best member.
 
-Formally: let P(H), P(AI), P(H+AI) be performance on a common metric. Human–AI synergy ⟺ P(H+AI) > max(P(H), P(AI)).
+Formally: performance(human-AI) > max(performance(human), performance(AI)).
+
+This is distinct from **human augmentation** (weak synergy), which only requires the combined system to outperform the human alone.
 
 ## Intuition
 
-Synergy requires that humans and AI contribute genuinely complementary capabilities—each better at different subtasks—and that the system correctly routes work to the superior partner. It is not guaranteed by AI skill alone; if AI is already better than the human, adding the human can actively hurt because the human may override correct AI outputs with noisier judgements.
+True synergy requires each party to contribute complementary strengths: the human must be better at some subtasks and the AI better at others, and the system must allocate subtasks correctly. When the AI already outperforms the human globally, having the human make final decisions introduces noise, not signal. This is why relative capability is such a strong moderator of whether synergy is achievable.
 
 ## Variants
 
-- **Task-partitioned synergy**: humans and AI explicitly handle different subtasks (division of labour), maximizing complementarity. Rare in practice (only ~3 of 106 experiments in Vaccaro et al. 2024).
-- **Human augmentation**: weaker condition; human–AI combined beats the human alone but may fall short of the AI alone.
-- **AI augmentation**: combined beats the AI alone but falls short of the human alone (rare in modern AI settings).
+- **Human augmentation (weak synergy):** Human-AI > human alone. Weaker condition, useful in contexts where full automation is not permitted.
+- **Task-delegated synergy:** A pre-specified division of labor (human handles some subtasks, AI handles others) — the rarest but most reliable route to positive synergy per Vaccaro et al.
 
 ## Comparison
 
-| Condition | Baseline | Outcome |
+| Concept | Baseline | Average finding (Vaccaro et al. 2024) |
 |---|---|---|
-| Human–AI synergy | max(human, AI) | combined > max |
-| Human augmentation | human alone | combined > human |
-| No benefit | human alone | combined ≤ human |
+| Human-AI synergy | max(human, AI) | g = -0.23 (significantly negative) |
+| Human augmentation | human alone | g = +0.64 (significantly positive) |
 
 ## Known limitations
 
-- Measuring synergy requires eliciting the AI-alone baseline, which many studies omit (they only compare human–AI to human alone, measuring augmentation).
-- Task performance is multi-dimensional; synergy on accuracy may coincide with regression on speed or cost.
-- Synergy is task-specific: the same human–AI pair may show synergy on creation tasks and losses on decision tasks.
+- Synergy is rare on average across recent experiments; it is achievable in specific conditions (creation tasks, humans outperforming AI).
+- Measuring synergy requires reporting the AI-alone baseline, which many studies omit.
+- Ceiling effects and non-linear accuracy scaling complicate comparison at high-performance regimes.
 
 ## Open problems
 
-- What collaboration architectures reliably produce synergy even when AI outperforms humans on the task overall?
-- How does the synergy landscape shift as AI capabilities improve—will the human-outperforms-AI regime (where synergy is easier) shrink?
-- Can commensurability standards for human–AI experiments enable systematic tracking of synergy rates across the literature?
+- Can generative AI (LLMs) provide a consistent path to human-AI synergy in open-ended creation tasks?
+- What process designs (division of labor, sequential workflows) reliably elicit synergy beyond the rare experimental examples?
 
 ## Relationship to foundations
 
-Conceptually related to complementarity and division of labour in human group research and to the theory of comparative advantage in economics.
+Derived from collective intelligence theory and the human teams synergy literature (Larson & Christensen 1993; Almaatouq et al. 2021).
 
 ## Realized by
 
-- [[three-level-meta-analytic-model]] — the statistical framework used to estimate and test human–AI synergy in meta-analysis
-
 ## My understanding
 
-The power of Vaccaro et al. (2024) is showing that average synergy is *negative*, yet highly heterogeneous, and that the task-type and relative-performance moderators are the key levers. Synergy is not a default property of human–AI teams; it must be engineered through deliberate task design and allocation.
+The critical insight is that "human in the loop" is not inherently beneficial — it depends on task structure and the relative capabilities of human and AI. Designing for synergy requires moving beyond simple AI-advises-human paradigms toward structured task decomposition.
