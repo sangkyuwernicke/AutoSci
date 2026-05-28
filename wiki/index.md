@@ -125,6 +125,10 @@ concepts:
 concepts:
   - slug: collaborative-scaling-law
   - slug: multi-agent-collaboration-network
+  - slug: topological-structure-learning-should-research-priority
+
+concepts:
+  - slug: multi-agent-system-topology
 
 topics:
 
@@ -173,6 +177,7 @@ methods:
   - slug: persona-based-llm-trading-simulation
   - slug: llm-based-collaboration-analysis
   - slug: macnet-multi-agent-collaboration-network
+  - slug: three-stage-topological-structure-optimization-framework
 
 experiments:
 

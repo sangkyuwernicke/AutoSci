@@ -32,3 +32,4 @@
 ## [2026-05-28] ingest | added papers/chatcollab-exploring-collaboration-between-humans-ai | updated: concepts/human-ai-collaborative-teaming, methods/llm-based-collaboration-analysis, graph/edges.jsonl, index.md
 ## [2026-05-28] ingest | added papers/optimizing-human-ai-collaboration-effects-motivation | updated: concepts/trust-calibration-human-ai-collaboration, wiki/index.md
 ## [2026-05-28] ingest | added papers/scaling-large-language-model-based-multi | updated: concepts/collaborative-scaling-law, concepts/multi-agent-collaboration-network, methods/macnet-multi-agent-collaboration-network, people/chen-qian, people/zhiyuan-liu, people/maosong-sun, index.md
+## [2026-05-28] ingest | added papers/topological-structure-learning-should-research-priority | updated: concepts/multi-agent-system-topology, methods/three-stage-topological-structure-optimization-framework, index.md
