@@ -18,6 +18,12 @@ concepts:
 
 concepts:
   - slug: human-ai-collaboration
+  - slug: generative-agentic-ai-survey-conceptualization-challenges
+
+concepts:
+  - slug: agentic-ai
+  - slug: chain-thought-reasoning
+  - slug: retrieval-augmented-generation
 
 topics:
 
@@ -25,6 +31,7 @@ people:
   - slug: michelle-vaccaro
   - slug: abdullah-almaatouq
   - slug: thomas-malone
+  - slug: johannes-schneider
 
 ideas:
 
@@ -32,6 +39,7 @@ methods:
   - slug: llm-optimizer-domain-adaptation
   - slug: three-level-meta-analytic-model
   - slug: assertion-based-benchmarking
+  - slug: tree-thoughts
 
 experiments:
 
