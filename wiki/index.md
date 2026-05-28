@@ -1,8 +1,10 @@
 # Wiki Index
 
 papers:
+  - slug: evidence-field-experiment-human-ai-collaboration
 
 concepts:
+  - slug: human-loop-ai-services
 
 topics:
 
