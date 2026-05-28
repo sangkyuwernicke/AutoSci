@@ -28,3 +28,4 @@
 ## [2026-05-28] ingest | added papers/agentverse-facilitating-multi-agent-collaboration-exploring | updated: concepts/multi-agent-collaboration, concepts/expert-recruitment, concepts/emergent-agent-behaviors, methods/agentverse-framework, people/weize-chen, people/zhiyuan-liu
 ## [2026-05-28] ingest | added papers/collaborating-ai-agents-field-experiment-teamwork | updated: concepts/human-ai-collaboration, concepts/jagged-frontier, concepts/diversity-collapse, concepts/delegation-workflow, methods/pairit, people/harang-ju, people/sinan-aral
 ## [2026-05-28] ingest | added papers/persona-driven-llm-interaction-stock-market | updated: concepts/persona-driven-prompting, methods/persona-based-llm-trading-simulation, index.md
+## [2026-05-28] ingest | added papers/ai-augmented-organization-design-limitations-collaboration | updated: concepts/ai-augmented-organization, wiki/index.md

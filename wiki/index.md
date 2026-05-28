@@ -108,6 +108,10 @@ concepts:
 
 concepts:
   - slug: persona-driven-prompting
+  - slug: ai-augmented-organization-design-limitations-collaboration
+
+concepts:
+  - slug: ai-augmented-organization
 
 topics:
 
