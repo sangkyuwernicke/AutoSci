@@ -87,6 +87,10 @@ concepts:
 
 concepts:
   - slug: retrieval-augmented-generation
+  - slug: tradingagents-multi-agents-llm-financial-trading
+
+concepts:
+  - slug: llm-multi-agent-financial-trading
 
 topics:
 
@@ -124,6 +128,7 @@ methods:
   - slug: quantagent-multi-agent-trading-system
   - slug: cot-based-llm-etf-allocation-framework
   - slug: rag-financial-qa
+  - slug: tradingagents-framework
 
 experiments:
 
