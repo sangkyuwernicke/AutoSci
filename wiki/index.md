@@ -129,6 +129,10 @@ concepts:
 
 concepts:
   - slug: multi-agent-system-topology
+  - slug: orchestration-framework-financial-agents-algorithmic-trading
+
+concepts:
+  - slug: agentic-trading
 
 topics:
 
@@ -178,6 +182,7 @@ methods:
   - slug: llm-based-collaboration-analysis
   - slug: macnet-multi-agent-collaboration-network
   - slug: three-stage-topological-structure-optimization-framework
+  - slug: dag-based-agent-orchestration
 
 experiments:
 
