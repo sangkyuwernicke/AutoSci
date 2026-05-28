@@ -1,0 +1,1 @@
+{"from": "papers/towards-effective-genai-multi-agent-collaboration", "to": "concepts/multi-agent-collaboration", "type": "introduces_concept", "evidence": "Paper presents a MAC framework for enterprise applications with hierarchical agents, inter-agent communication, payload referencing, and dynamic routing.", "date": "2026-05-28", "confidence": "high"}
