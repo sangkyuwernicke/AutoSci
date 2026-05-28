@@ -14,6 +14,10 @@ concepts:
 
 concepts:
   - slug: multi-agent-collaboration
+  - slug: factors-influencing-human-ai-collaboration-scoping
+
+concepts:
+  - slug: human-ai-collaboration
 
 topics:
 
