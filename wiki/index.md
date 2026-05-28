@@ -62,6 +62,10 @@ concepts:
 
 concepts:
   - slug: retrieval-augmented-generation
+  - slug: study-explainable-gpt-based-stock-investment
+
+concepts:
+  - slug: explainable-ai-stock-investment-analysis
 
 topics:
 
@@ -92,6 +96,7 @@ methods:
   - slug: lora-fine-tuning-content-moderation
   - slug: minigpt-projection-alignment
   - slug: role-based-multi-ai-agent-stock
+  - slug: rag-multi-agent-stock-analysis
 
 experiments:
 

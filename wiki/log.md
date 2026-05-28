@@ -17,3 +17,4 @@
 ## [2026-05-28] ingest | added papers/slm-mod-small-language-models-surpass | updated: concepts/community-specific-content-moderation, methods/lora-fine-tuning-content-moderation
 ## [2026-05-28] ingest | added papers/minigpt-enhancing-vision-language-understanding-advanced | updated: concepts/vision-language-alignment, concepts/multimodal-large-language-model, concepts/two-stage-vision-language-pretraining, methods/minigpt-projection-alignment, people/deyao-zhu, people/jun-chen, people/mohamed-elhoseiny
 ## [2026-05-28] ingest | added papers/study-explainable-gpt-based-stock-investment | updated: concepts/retrieval-augmented-generation, methods/role-based-multi-ai-agent-stock
+## [2026-05-28] ingest | added papers/study-explainable-gpt-based-stock-investment | updated: concepts/explainable-ai-stock-investment-analysis, methods/rag-multi-agent-stock-analysis, wiki/index.md

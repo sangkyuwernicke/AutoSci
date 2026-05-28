@@ -6,17 +6,16 @@ venue: "Information Systems Review (경영정보학연구)"
 year: 2025
 tags:
   - financial-ai
-  - llm-agents
-  - retrieval-augmented-generation
   - multi-agent-systems
+  - retrieval-augmented-generation
+  - explainability
   - stock-analysis
-  - explainable-ai
-  - prompt-engineering
+  - llm-application
 importance: 3
-date_added: 2026-05-29
+date_added: "2026-05-29"
 source_type: pdf
 s2_id: ""
-tldr: "Implements an explainable automated stock investment analysis system by combining ChatGPT-4o with role-based multi-AI agents and RAG to collect real-time financial/non-financial data and generate interpretable investment reports."
+tldr: "An automated, explainable stock investment analysis system built with ChatGPT-4o, 11 role-based AI agents, and a RAG framework that integrates real-time financial APIs to generate structured investment reports."
 contribution_type:
   - system
   - application
@@ -27,62 +26,74 @@ cited_by: []
 
 ## Problem & Context
 
-Individual investors face severe information asymmetry in stock markets: structured financial data (PER, PBR, ROE), unstructured text (news, ESG disclosures), and real-time macroeconomic indicators are typically analyzed in silos. Prior approaches either rely on traditional financial-ratio analysis (high interpretability, low automation), sentiment/ESG analysis (moderate automation, limited integration), or ML/deep-learning models (high predictive power, black-box outputs). No prior system combined all three with real-time retrieval, role-divided agent collaboration, and natural-language explainability in a single automated pipeline applicable to the Korean market.
+Individual investors in the Korean stock market face growing information asymmetry and analytic complexity, while existing AI-based tools remain siloed — covering only subsets such as news sentiment analysis, technical charting, or financial ratio prediction. Prior work (MarketSenseAI 2.0, FinRobot, GPT-InvestAR, TradingAgents) demonstrates that LLM-based agents can match professional analysts in narrow tasks, but no system had realized a fully integrated, end-to-end automated investment workflow covering financial disclosures, macroeconomic indicators, ESG data, technical analysis, and machine-learning price forecasting in a single unified pipeline. Black-box ML models further undermine practical adoption by limiting interpretability. The paper targets the Korean domestic market specifically, integrating DART (Korea's SEC-equivalent electronic disclosure system) and ECOS (Bank of Korea economic statistics) as primary data sources.
 
 ## Key idea
 
-Combine ChatGPT-4o's generative capability with (1) a RAG layer that grounds every analysis step in live external data from DART (Korea's corporate disclosure system), Bank of Korea ECOS (macroeconomic statistics), and Google News & Finance APIs, and (2) eleven role-specialized AI agents (Planning, DART, SearchEngine, ECOS, Fundamental, Finance, Chart, Machine Learning, Reasoning, Analysis, Reflection) that hand off results sequentially. The Reflection agent self-refines the assembled report twice before final delivery, ensuring completeness and consistency. Because all outputs are expressed in natural language via the LLM, the system is inherently explainable relative to black-box ML predictors.
+The central insight is that combining RAG (for real-time factual grounding) with a role-partitioned multi-agent architecture (for workflow specialization) inside a single ChatGPT-4o GPT custom instance can automate the entire investment analysis lifecycle — from planning through final report — while remaining interpretable via natural-language outputs. Each agent is implemented via prompt engineering personas within a single LLM, avoiding multi-model orchestration complexity. The system follows a strict 8-stage sequential pipeline gated by user approval before execution begins.
 
 ## Method
 
-The system is built as a custom GPT (ChatGPT Plus, GPT-4o) using OpenAI's GPT Builder. The Instruction block is divided into four parts: `[Definitions & Procedures]`, `[AI Agents]` (eleven persona-prompted agents), `[API Agents]` (OpenAPI 3.1.0 schemas for DART, ECOS, SerpAPI), and `[Rules]` (output formatting, Korean font handling, field-type constraints). Each agent is implemented as a role-prompted persona inside a single LLM instance — not a separate model — communicating through prompt context.
+The system is implemented as a ChatGPT Plus GPT custom agent. The architecture has three orthogonal components:
 
-Data collected per company (given a ticker/name input):
-- **DART Agent**: 3-year annual + recent quarterly financial statements (B/S, I/S, C/F) via DART OpenAPI.
-- **ECOS Agent**: macroeconomic indicators (interest rate, exchange rate, GDP growth) via Bank of Korea API.
-- **SearchEngine Agent**: Google News & Finance (last 1 month), ESG disclosures, industry trend news via SerpAPI.
-- **Chart Agent**: 1-month OHLCV data → trend line, support/resistance, RSI, MACD visualized with Matplotlib.
-- **Machine Learning Agent**: Random Forest, XGBoost, SVM, ARIMA applied to 1-month price/volume data; evaluated by MAE, RMSE, MAPE; produces buy/sell/hold signals.
-- **Reasoning → Analysis → Reflection**: intermediate opinions → integrated investment recommendation → self-refined final report (.docx).
+1. **RAG layer**: Real-time external retrieval from DART OpenAPI (financial disclosures), Bank of Korea ECOS API (macroeconomic indicators), and Google News & Finance via SerpAPI. Retrieved documents are injected as augmentation context, reducing hallucination and enabling up-to-date analysis.
 
-Knowledge files uploaded to the GPT (`corp_code.xlsx`, `guide.docx`, `NanumGothic.ttf`) serve as internal retrieval sources for ticker lookup and Korean font rendering in visualizations.
+2. **Multi-agent structure (11 agents)**: All agents are prompt-engineering personas within a single GPT-4o model:
+   - *Planning Agent* — structures the 8-step analysis plan and requests user approval
+   - *Dart Agent*, *Ecos Agent*, *SearchEngine Agent* — API data collection roles
+   - *Fundamental Agent* — intrinsic value and industry competitiveness
+   - *Finance Agent* — financial ratio analysis (ROE, ROA, PER, PBR, etc.)
+   - *Chart Agent* — technical analysis (RSI, MACD, trend lines) on 1-month price/volume data
+   - *Machine Learning Agent* — price forecasting with RF, XGBoost, SVM, ARIMA; evaluated by MAE, RMSE, MAPE; outputs buy/hold/sell signals
+   - *Reasoning Agent* — intermediate opinion synthesis at each stage
+   - *Analysis Agent* — cross-stage synthesis and final investment opinion
+   - *Reflection Agent* — self-refinement via 2 rounds of self-feedback, producing final report
+
+3. **GPT Instruction schema**: Four-part instruction block (Definitions & Procedures, AI Agents, API connection rules, Display Rules) encoded in GPT's system instruction; knowledge base includes corp_code.xlsx, guide.docx, and NanumGothic.ttf for Korean font rendering.
+
+The system generates Python code internally (executed via GPT's code interpreter) for ML model training and chart visualization; code can also be exported and verified in external Jupyter environments.
 
 ## Experiment & Results
 
-Applied to Lotte Chemical (KRX: 011170) as a case study. All eight analysis stages completed automatically: company overview, macro/industry analysis, 3-year financial statement analysis, ESG analysis, news sentiment, technical analysis (RSI neutral 45–65; MACD converging), ML price prediction, and consolidated investment report.
+Applied to Lotte Chemical (KRX: 011170) as a demonstration case. The full 8-stage pipeline executed end-to-end:
 
-ML model comparison for 5-day price forecast:
-| Model | MAE | RMSE | Forecast |
-|-------|-----|------|---------|
-| Random Forest | ~968 KRW | ~1,087 KRW | 63,800 KRW |
-| XGBoost | ~975 KRW | ~1,091 KRW | 63,700 KRW |
-| ARIMA | ~1,145 KRW | ~1,285 KRW | 63,300 KRW |
+- **DART API**: 3-year (2022–2024) consolidated financials retrieved; Lotte Chemical showed 3 consecutive years of operating losses (−76.2B, −34.7B, −89.4B KRW) and 2024 net loss of −1.8T KRW
+- **ECOS**: Macroeconomic snapshot (base rate 2.5%, GDP growth −0.2%, Dubai crude $63.6)
+- **ML price forecasting** (1-month training data, 5-day forward prediction):
+  - Random Forest: MAE ≈ 968 KRW, RMSE ≈ 1,087 KRW, predicted 63,800 KRW
+  - XGBoost: MAE ≈ 975, RMSE ≈ 1,091, predicted 63,700 KRW
+  - ARIMA: MAE ≈ 1,145, RMSE ≈ 1,285, predicted 63,300 KRW (least accurate)
+- **Technical analysis**: RSI in neutral zone (45–65), MACD converging, suggesting short-term range-bound trading near 62,000–65,000 KRW
+- **Final verdict**: Hold — fundamental weakness (ongoing losses) offsets long-term turnaround potential via ESG/green chemistry transition
+- **Reproducibility**: Confirmed — repeated runs with same stock code yielded consistent analysis given the same API data snapshot
 
-Random Forest and XGBoost outperformed ARIMA. Final investment recommendation: "Hold" (3-year consecutive operating losses, high debt, but long-term turnaround potential given ESG/new-business initiatives). External API connections (DART, ECOS, SerpAPI) functioned stably. Python code generated by GPT was verified externally in Jupyter and produced reproducible results matching GPT's internal analysis.
-
-Comparative advantage over prior methods: RAG achieves real-time grounding (vs. static training cutoff), multi-agent design achieves automation parity vs. human analysts, and natural-language output achieves interpretability vs. black-box ML.
+No benchmark comparison against other automated systems or human analysts was conducted; evaluation is qualitative and demonstration-style.
 
 ## Limitations
 
-- **Context length / step-skip**: ChatGPT Plus memory and execution-time limits occasionally caused the GPT to skip or condense planned analysis steps; mitigated by a post-execution plan-vs-result comparison prompt.
-- **Data scope**: Google News & Finance API limited to 1-month history; DART API memory overflow forced use of summarized rather than full financial statements.
-- **Resource contention**: GPT-4o API rate limits and peak-hour degradation caused response delays.
-- **Model specialization**: All eleven agents share one GPT-4o backbone — domain-specialized fine-tuning (e.g., InvestLM) is not applied.
-- **ML input window**: Only 1-month data used for ML training; long-horizon trend prediction reliability is limited.
-- **No quantitative backtest**: The system is demonstrated on a single company case; no statistical backtest across a portfolio or time window is reported.
+1. **Single-model multi-agent**: All agents run inside one GPT-4o model, so role separation is via prompt framing alone — no true isolation, parallelism, or cross-agent verification
+2. **Context/memory constraints**: In long analyses, GPT intermittently skips planned stages; mitigated by Planning–Analysis cross-check prompt, but not fully eliminated
+3. **Short training window for ML**: All models trained on 1-month data only; inadequate for medium/long-term trend prediction (ARIMA explicitly underperforms on sharp price swings)
+4. **API limitations**: DART API memory overflow on full financial statements (summary only used); Google Finance limited to 1-month historical data; SerpAPI depends on commercial subscription
+5. **Domain generalization**: System tuned for Korean market data sources (DART, ECOS, KRX codes); re-adaptation required for other markets
+6. **No human-expert baseline**: Results not compared against professional analyst reports or alternative AI systems in quantitative terms
+7. **ChatGPT Plus resource limits**: Response delays and task omissions occur under peak load; LSTM/GRU models not usable due to missing Python library support in GPT environment
 
 ## Open questions
 
-- Can specialized open-source financial LLMs (InvestLM, FinGPT) replace GPT-4o agents to reduce cost and improve domain precision?
-- How does performance degrade under API outages, delayed disclosures, or data quality issues in real trading environments?
-- Would a true multi-model architecture (separate LLM per agent, not persona prompting) improve inter-agent reasoning quality?
-- How does the system handle Korean-specific data idiosyncrasies (IFRS vs. K-GAAP, KOSPI/KOSDAQ-specific disclosures)?
+- Can multi-model agent orchestration (e.g., domain-specialized open-source LLMs via Hugging Face) replace prompt-persona design to achieve true role isolation and improved domain expertise?
+- What is the optimal training window and model architecture for short-to-medium-term Korean stock price forecasting when data is limited to API-accessible history?
+- How does this system's investment recommendations compare to professional analyst recommendations and market-beating benchmarks (Sortino ratio, alpha vs. KOSPI)?
+- Can agentic RAG with longer context windows (GPT-4o+ successors) eliminate stage-skipping failures?
 
 ## My take
 
-A clear and useful application paper that demonstrates the full pipeline of a RAG + multi-agent investment analysis system on a real Korean stock. The system design is well-structured and practically reproducible within ChatGPT Plus constraints. The key contribution is showing end-to-end automation from ticker input to final report, combining heterogeneous data sources that prior works addressed only in isolation. The main weaknesses are the single-company demonstration (no backtest), persona-based rather than true multi-model agents, and resource constraints imposed by the ChatGPT Plus environment. The paper is primarily a systems/application contribution and would benefit from rigorous quantitative evaluation in future work.
+This paper is primarily an engineering/application demonstration rather than a scientific contribution. The 11-agent design is architecturally interesting as a structured prompt-engineering pattern, but the evaluation is anecdotal — one stock, no baselines, qualitative verdict only. The system's real value is in showing that a non-programmer investor could in principle trigger a full multi-source financial analysis with a single company name input. The approach of combining RAG-based real-time retrieval with ML-based quantitative signals and LLM-based explanation is a reasonable practical architecture. The Korean market focus (DART, ECOS) fills a gap in English-language research that mostly covers SEC/US markets.
 
 ## Related
 
-- [[retrieval-augmented-generation]] — core architectural component
-- [[role-based-multi-ai-agent-stock]] — the specific method introduced
+- [[marketsense-ai-2]] — RAG + LLM agents for S&P 500 stock analysis; achieves 33.8% higher Sortino ratio vs. market
+- [[trading-agents]] — role-separated LLM trading agents (fundamental analyst, sentiment analyst, trader roles)
+- [[finrobot]] — CoT-based multi-agent for equity research and investment report generation
+- [[gpt-investar]] — GPT-based annual report analysis for stock investment with backtesting
+- [[investlm]] — finance-domain fine-tuned LLM for investment advisory
