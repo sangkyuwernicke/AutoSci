@@ -13,3 +13,4 @@
 ## [2026-05-28] ingest | added papers/large-language-model-based-multi-agents | updated: concepts/llm-based-multi-agent-systems, concepts/agent-communication, concepts/agent-capability-acquisition, methods/llm-ma-taxonomy, people/xiangliang-zhang
 ## [2026-05-28] ingest | added papers/metoformer-hq-multi-scale-horizon-adaptive | updated: concepts/metocean-forecasting, methods/horizon-adaptive-decoding
 ## [2026-05-28] ingest | added papers/when-combinations-humans-ai-useful | updated: concepts/human-ai-synergy, concepts/human-augmentation, methods/three-level-meta-analytic-model, people/michelle-vaccaro, people/abdullah-almaatouq, people/thomas-malone, index.md
+## [2026-05-28] ingest | added papers/autonomous-agents-collaborative-task-under-information | updated: concepts/information-asymmetry-multi-agent-systems, concepts/informative-multi-agent-system, methods/infonav, people/chen-qian, people/cheng-yang

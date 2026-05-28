@@ -43,6 +43,11 @@ concepts:
 concepts:
   - slug: human-ai-synergy
   - slug: human-augmentation
+  - slug: autonomous-agents-collaborative-task-under-information
+
+concepts:
+  - slug: information-asymmetry-multi-agent-systems
+  - slug: informative-multi-agent-system
 
 topics:
 
@@ -52,6 +57,8 @@ people:
   - slug: thomas-malone
   - slug: johannes-schneider
   - slug: xiangliang-zhang
+  - slug: chen-qian
+  - slug: cheng-yang
 
 ideas:
 
@@ -64,6 +71,7 @@ methods:
   - slug: llm-ma-taxonomy
   - slug: horizon-adaptive-decoding
   - slug: three-level-meta-analytic-model
+  - slug: infonav
 
 experiments:
 
