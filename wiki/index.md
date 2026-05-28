@@ -97,6 +97,13 @@ concepts:
   - slug: multi-agent-collaboration
   - slug: expert-recruitment
   - slug: emergent-agent-behaviors
+  - slug: collaborating-ai-agents-field-experiment-teamwork
+
+concepts:
+  - slug: human-ai-collaboration
+  - slug: jagged-frontier
+  - slug: diversity-collapse
+  - slug: delegation-workflow
 
 topics:
 
@@ -113,6 +120,8 @@ people:
   - slug: mohamed-elhoseiny
   - slug: weize-chen
   - slug: zhiyuan-liu
+  - slug: harang-ju
+  - slug: sinan-aral
 
 ideas:
 
@@ -136,6 +145,7 @@ methods:
   - slug: rag-financial-qa
   - slug: tradingagents-framework
   - slug: agentverse-framework
+  - slug: pairit
 
 experiments:
 
