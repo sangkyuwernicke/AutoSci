@@ -52,6 +52,12 @@ concepts:
 
 concepts:
   - slug: community-specific-content-moderation
+  - slug: minigpt-enhancing-vision-language-understanding-advanced
+
+concepts:
+  - slug: vision-language-alignment
+  - slug: multimodal-large-language-model
+  - slug: two-stage-vision-language-pretraining
 
 topics:
 
@@ -63,6 +69,9 @@ people:
   - slug: xiangliang-zhang
   - slug: chen-qian
   - slug: cheng-yang
+  - slug: deyao-zhu
+  - slug: jun-chen
+  - slug: mohamed-elhoseiny
 
 ideas:
 
@@ -77,6 +86,7 @@ methods:
   - slug: three-level-meta-analytic-model
   - slug: infonav
   - slug: lora-fine-tuning-content-moderation
+  - slug: minigpt-projection-alignment
 
 experiments:
 
