@@ -10,6 +10,10 @@ concepts:
 concepts:
   - slug: human-ai-synergy
   - slug: human-augmentation
+  - slug: towards-effective-genai-multi-agent-collaboration
+
+concepts:
+  - slug: multi-agent-collaboration
 
 topics:
 
@@ -23,6 +27,7 @@ ideas:
 methods:
   - slug: llm-optimizer-domain-adaptation
   - slug: three-level-meta-analytic-model
+  - slug: assertion-based-benchmarking
 
 experiments:
 
