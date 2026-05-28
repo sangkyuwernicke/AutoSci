@@ -20,3 +20,5 @@
 ## [2026-05-28] ingest | added papers/study-explainable-gpt-based-stock-investment | updated: concepts/explainable-ai-stock-investment-analysis, methods/rag-multi-agent-stock-analysis, wiki/index.md
 ## [2026-05-28] ingest | added papers/agentverse-facilitating-multi-agent-collaboration-exploring | updated: concepts/multi-agent-collaboration, concepts/emergent-agent-behaviors, methods/agentverse-framework, people/weize-chen, people/zhiyuan-liu
 ## [2026-05-28] ingest | added papers/quantagent-price-driven-multi-agent-llms | added concepts/high-frequency-trading-llms | added methods/quantagent-multi-agent-trading-system
+## [2026-05-28] ingest | added papers/etf-asset-allocation-strategy-using-chatgpt | updated: concepts/chain-thought-prompting-financial-text-analysis, methods/cot-based-llm-etf-allocation-framework
+## [2026-05-28] ingest | added papers/etf-asset-allocation-strategy-using-chatgpt | updated: concepts/chain-thought-prompting-financial-text-analysis, methods/cot-based-llm-etf-allocation-framework
