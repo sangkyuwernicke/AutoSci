@@ -34,3 +34,5 @@
 ## [2026-05-28] ingest | added papers/scaling-large-language-model-based-multi | updated: concepts/collaborative-scaling-law, concepts/multi-agent-collaboration-network, methods/macnet-multi-agent-collaboration-network, people/chen-qian, people/zhiyuan-liu, people/maosong-sun, index.md
 ## [2026-05-28] ingest | added papers/topological-structure-learning-should-research-priority | updated: concepts/multi-agent-system-topology, methods/three-stage-topological-structure-optimization-framework, index.md
 ## [2026-05-28] ingest | added papers/orchestration-framework-financial-agents-algorithmic-trading | updated: concepts/agentic-trading, methods/dag-based-agent-orchestration, wiki/index.md
+## [2026-05-29] ingest | added papers/tacit-knowledge-management-generative-ai-proposal | updated: concepts/digital-fragmented-knowledge, methods/digital-knowledge-twin-system
+## [2026-07-20] ideate | 3 ideas proposed, 3 ideas filtered out | direction: KOSPI에 LLM 기반 투자 전략 강화 학습 적용

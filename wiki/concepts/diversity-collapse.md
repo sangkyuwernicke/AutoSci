@@ -13,7 +13,7 @@ maturity: active
 definition: The reduction in output diversity that occurs when AI agents contribute substantially to collaborative or individual creative work, resulting in outputs that are more self-similar across teams or individuals compared to human-only conditions.
 key_papers:
   - "[[collaborating-ai-agents-field-experiment-teamwork]]"
-first_introduced: "Padmakumar & He 2024; Chen et al. 2024"
+first_introduced: Padmakumar & He 2024; Chen et al. 2024
 date_updated: 2026-05-29
 related_concepts:
   - "[[human-ai-collaboration]]"
