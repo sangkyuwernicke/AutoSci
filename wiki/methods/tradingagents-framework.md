@@ -1,5 +1,5 @@
 ---
-title: TradingAgents Framework
+name: TradingAgents Framework
 slug: tradingagents-framework
 tags:
   - multi-agent-systems

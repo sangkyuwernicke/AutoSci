@@ -1,5 +1,6 @@
 ---
-title: "DAG-Based Agent Orchestration"
+name: "DAG-Based Agent Orchestration"
+slug: dag-based-agent-orchestration
 aliases:
   - DAG planner orchestration
   - FinAgent DAG orchestration
@@ -8,7 +9,7 @@ tags:
   - orchestration
   - dag
   - financial-ai
-type: framework
+type: system
 source_papers:
   - "[[orchestration-framework-financial-agents-algorithmic-trading]]"
 realizes_concepts:

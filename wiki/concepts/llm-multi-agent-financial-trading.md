@@ -18,8 +18,16 @@ definition: >
   professional trading firms.
 key_papers:
   - "[[tradingagents-multi-agents-llm-financial-trading]]"
+  - "[[tradinggpt-multi-agent-system-layered-memory]]"
+  - "[[fincon-synthesized-llm-multi-agent-system]]"
+  - "[[hedgeagents-balanced-aware-multi-agent-financial]]"
+  - "[[llm-powered-multi-agent-system-automated]]"
+  - "[[quantagents-towards-multi-agent-financial-system]]"
+  - "[[when-agents-trade-live-multi-market]]"
+  - "[[tradinggroup-multi-agent-trading-system-self]]"
+  - "[[stocksim-dual-mode-order-level-simulator]]"
 first_introduced: "2024"
-date_updated: 2026-05-29
+date_updated: 2026-08-22
 related_concepts: []
 linked_ideas: []
 ---
@@ -35,9 +43,14 @@ A single LLM prompted to "trade a stock" must simultaneously ingest price data, 
 ## Variants
 
 - **Debate-driven:** Bull/bear researcher agents debate for $n$ rounds before the trader acts (TradingAgents).
-- **Memory-augmented:** Agents maintain layered memory of past decisions and market outcomes (FinMem, FinAgent).
+- **Memory-augmented:** Agents maintain layered memory of past decisions and market outcomes (TradingGPT, FinMem, FinAgent).
 - **RL-augmented:** Agents whose outputs are shaped by reinforcement signals from backtesting results (SEP).
 - **Alpha-mining:** Agents generate and refine quantitative factors rather than direct buy/sell signals (QuantAgent, AlphaGPT).
+- **Hierarchical, risk-controlled, portfolio-capable:** A manager agent as sole decision-maker consolidates single-modality analyst outputs; a dual-level risk-control mechanism (within-episode CVaR gating plus over-episode conceptual belief updates) governs both single-stock trading and multi-asset portfolio management (FinCon).
+- **Conference-based hedging:** A fund-manager agent and per-asset-class hedging-expert agents coordinate through three distinct, differently-cadenced conference types — periodic CVaR/mean-variance budget allocation, periodic experience sharing, and reactive extreme-market crisis meetings — to hedge capital across asset classes rather than optimize a single security (HedgeAgents).
+- **Modality-specialized, architecture-agnostic (crypto portfolio):** Three fixed-role agents — one per modality (structured market time series, news sentiment, trading-action fusion) — with the inter-agent communication architecture (hierarchical, collaborative, or debate) and each agent's reasoning capability (zero-shot, CoT, RAG, or skill-augmented) treated as two independently swappable design axes benchmarked against each other in one framework, applied to a 15-asset cryptocurrency universe rather than equities (CryptoMAS).
+- **Simulated-trading dual-reward:** A manager agent plus simulated-trading, risk-control, and market-news analyst agents coordinate through weekly and reactive meetings; the policy is optimized against a reward that adaptively blends real-market outcomes with a parallel simulated-trading (backtest) reward channel, giving the system an explicit forward-looking signal beyond post-hoc reflection on real trades (QuantAgents).
+- **Fixed-pipeline with shared reward-labeled reflection and post-training substrate:** Five agents (news sentiment, financial-report RAG, forecasting, style preference, decision) run in a fixed dependency order rather than a debate; forecasting, style, and decision agents reflect on their own reward-labeled case history from a shared data-synthesis pipeline, and the same reward-labeled log is filtered to produce SFT data for fine-tuning the base LLM (TradingGroup).
 
 ## Comparison
 
@@ -51,14 +64,14 @@ A single LLM prompted to "trade a stock" must simultaneously ingest price data, 
 ## Known limitations
 
 - LLM inference cost scales with number of agents and debate rounds, making high-frequency or live trading expensive.
-- Performance benchmarks are often short (weeks to months) and on bull-market equities; generalization to adverse conditions is under-studied.
+- Performance benchmarks are often short (weeks to months) and on bull-market equities; generalization to adverse conditions is under-studied. Partially addressed by Agent Market Arena (two-month continuous live deployment spanning both equities and cryptocurrencies rather than a single asset class), though its window remains short and largely bullish, and it evaluates rather than introduces new multi-agent architectures.
 - Agent communication design (structured vs. unstructured) critically affects performance but is rarely ablated.
 
 ## Open problems
 
 - Optimal team composition (how many agents, which roles) for different asset classes or market regimes.
 - Cost-performance trade-off with smaller or locally hosted LLMs.
-- Integration of portfolio-level constraints into multi-agent coordination.
+- Integration of portfolio-level constraints into multi-agent coordination. Partially addressed by FinCon (mean-variance portfolio optimization on manager-selected directions for small 2–3 asset portfolios) and by HedgeAgents (CVaR/mean-variance budget allocation across 3 asset-class experts via a dedicated periodic conference), but scaling to larger, more heterogeneous portfolios remains open.
 
 ## Relationship to foundations
 
@@ -67,6 +80,12 @@ Draws on multi-agent systems theory, LLM prompting (ReAct), and organizational b
 ## Realized by
 
 - [[tradingagents-framework]]
+- [[tradinggpt-framework]]
+- [[fincon-framework]]
+- [[hedgeagents-framework]]
+- [[cryptomas-framework]]
+- [[quantagents-framework]]
+- [[tradinggroup-framework]]
 
 ## My understanding
 

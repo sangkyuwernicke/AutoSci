@@ -20,7 +20,8 @@ contribution_type:
   - application
 datasets: []
 code_url: https://github.com/TauricResearch/TradingAgents
-cited_by: []
+cited_by:
+  - "[[tradinggroup-multi-agent-trading-system-self]]"
 ---
 
 ## Problem & Context

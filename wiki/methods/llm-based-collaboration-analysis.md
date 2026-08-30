@@ -1,5 +1,6 @@
 ---
-title: "LLM-Based Collaboration Analysis"
+name: "LLM-Based Collaboration Analysis"
+slug: llm-based-collaboration-analysis
 aliases:
   - LLM-augmented qualitative coding
   - automated IPA coding
@@ -8,7 +9,7 @@ tags:
   - qualitative-coding
   - llm-evaluation
   - human-ai-collaboration
-type: analysis
+type: evaluation
 source_papers:
   - "[[chatcollab-exploring-collaboration-between-humans-ai]]"
 realizes_concepts:

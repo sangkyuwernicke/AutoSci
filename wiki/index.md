@@ -33,6 +33,18 @@ papers:
     title: "Factors Influencing Human-AI Collaboration: A Scoping Review"
     tags: [human-ai-collaboration, scoping-review, human-factors, trust, ai-anthropomorphism]
     importance: 2
+  - slug: fincon-synthesized-llm-multi-agent-system
+    title: "FinCon: A Synthesized LLM Multi-Agent System with Conceptual Verbal Reinforcement for Enhanced Financial Decision Making"
+    tags: [multi-agent-systems, llm-agents, financial-trading, algorithmic-trading, portfolio-management, risk-control, verbal-reinforcement]
+    importance: 5
+  - slug: finrl-deepseek-llm-infused-risk-sensitive
+    title: "FinRL-DeepSeek: LLM-Infused Risk-Sensitive Reinforcement Learning for Trading Agents"
+    tags: [reinforcement-learning, risk-sensitive-rl, financial-trading, algorithmic-trading, cvar, llm-signal-generation]
+    importance: 3
+  - slug: flag-trader-fusion-llm-agent-gradient
+    title: "FLAG-Trader: Fusion LLM-Agent with Gradient-based Reinforcement Learning for Financial Trading"
+    tags: [reinforcement-learning, llm-agents, financial-trading, algorithmic-trading, parameter-efficient-fine-tuning, policy-gradient, ppo]
+    importance: 4
   - slug: generative-agentic-ai-survey-conceptualization-challenges
     title: "Generative to Agentic AI: Survey, Conceptualization, and Challenges"
     tags: [agentic-ai, survey, generative-ai, llm-agents, reasoning, multi-agent-systems]
@@ -45,9 +57,17 @@ papers:
     title: "GraphRAG Analysis for Financial Narrative Summarization and A Framework for Optimizing Domain Adaptation"
     tags: [graphrag, retrieval-augmented-generation, financial-nlp, summarization, domain-adaptation, llm]
     importance: 2
+  - slug: hedgeagents-balanced-aware-multi-agent-financial
+    title: "HedgeAgents: A Balanced-aware Multi-agent Financial Trading System"
+    tags: [multi-agent-systems, llm-agents, financial-trading, algorithmic-trading, portfolio-management, risk-control, hedging]
+    importance: 4
   - slug: large-language-model-based-multi-agents
     title: "Large Language Model based Multi-Agents: A Survey of Progress and Challenges"
     tags: [multi-agent-systems, llm-agents, survey, agent-communication, agent-profiling, collective-intelligence]
+    importance: 4
+  - slug: llm-powered-multi-agent-system-automated
+    title: "LLM-Powered Multi-Agent System for Automated Crypto Portfolio Management"
+    tags: [multi-agent-systems, llm-agents, financial-trading, algorithmic-trading, portfolio-management, cryptocurrency, multi-modal-fusion]
     importance: 4
   - slug: metoformer-hq-multi-scale-horizon-adaptive
     title: "MetoFormer-HQ: Multi-scale and Horizon-Adaptive Transformer for Multivariate Metocean Forecasting"
@@ -73,6 +93,10 @@ papers:
     title: "QuantAgent: Price-Driven Multi-Agent LLMs for High-Frequency Trading"
     tags: [multi-agent, LLM, high-frequency-trading, quantitative-finance, technical-analysis, financial-AI]
     importance: 3
+  - slug: quantagents-towards-multi-agent-financial-system
+    title: "QuantAgents: Towards Multi-agent Financial System via Simulated Trading"
+    tags: [multi-agent-systems, llm-agents, financial-trading, algorithmic-trading, portfolio-management, risk-control, simulated-trading]
+    importance: 4
   - slug: research-building-system-improve-financial-literacy
     title: "Research on Building a Q&A System to Improve Financial Literacy Using RAG"
     tags: [rag, financial-literacy, qa-system, llm, prompt-engineering, nlp, domain-specific-qa]
@@ -84,6 +108,10 @@ papers:
   - slug: slm-mod-small-language-models-surpass
     title: "SLM-Mod: Small Language Models Surpass LLMs at Content Moderation"
     tags: [content-moderation, small-language-models, fine-tuning, community-norms, nlp, reddit]
+    importance: 3
+  - slug: stocksim-dual-mode-order-level-simulator
+    title: "StockSim: A Dual-Mode Order-Level Simulator for Evaluating Multi-Agent LLMs in Financial Markets"
+    tags: [multi-agent-systems, llm-agents, financial-trading, simulation, benchmark, evaluation, market-microstructure, order-book, system]
     importance: 3
   - slug: study-explainable-gpt-based-stock-investment
     title: "A Study on an Explainable GPT-Based Stock Investment Analysis System: Integrated Design of RAG Structure and Multi-AI Agent Framework"
@@ -105,6 +133,18 @@ papers:
     title: "TradingAgents: Multi-Agents LLM Financial Trading Framework"
     tags: [multi-agent-systems, llm-agents, financial-trading, algorithmic-trading, agentic-debate, role-specialization]
     importance: 3
+  - slug: tradinggpt-multi-agent-system-layered-memory
+    title: "TradingGPT: Multi-Agent System with Layered Memory and Distinct Characters for Enhanced Financial Trading Performance"
+    tags: [multi-agent-systems, llm-agents, financial-trading, agentic-debate, agent-memory, persona-driven-prompting]
+    importance: 3
+  - slug: tradinggroup-multi-agent-trading-system-self
+    title: "TradingGroup: A Multi-Agent Trading System with Self-Reflection and Data-Synthesis"
+    tags: [multi-agent-systems, llm-agents, financial-trading, algorithmic-trading, self-reflection, data-synthesis, post-training, risk-management, parameter-efficient-fine-tuning]
+    importance: 4
+  - slug: when-agents-trade-live-multi-market
+    title: "When Agents Trade: Live Multi-Market Trading Benchmark for LLM Agents"
+    tags: [multi-agent-systems, llm-agents, financial-trading, live-trading, benchmarking, algorithmic-trading, cryptocurrency-trading]
+    importance: 4
   - slug: when-combinations-humans-ai-useful-systematic
     title: "When combinations of humans and AI are useful: A systematic review and meta-analysis"
     tags: [human-ai-collaboration, meta-analysis, systematic-review, human-ai-synergy, decision-making, ai-augmentation]
@@ -155,6 +195,14 @@ concepts:
     title: "Community-Specific Content Moderation"
     tags: [content-moderation, community-norms, nlp, social-media]
     maturity: active
+  - slug: conceptual-verbal-reinforcement
+    title: "Conceptual Verbal Reinforcement"
+    tags: [llm-agents, multi-agent-systems, verbal-reinforcement, financial-trading, risk-control]
+    maturity: emerging
+  - slug: conference-based-multi-agent-hedging
+    title: "Conference-Based Multi-Agent Hedging"
+    tags: [llm-agents, multi-agent-systems, financial-trading, risk-control, portfolio-management, hedging]
+    maturity: emerging
   - slug: delegation-workflow
     title: "Delegation Workflow"
     tags: [human-AI collaboration, delegation, teamwork, work processes]
@@ -219,13 +267,29 @@ concepts:
     title: "Jagged Frontier"
     tags: [AI capabilities, human-AI collaboration, task performance, AI limitations]
     maturity: active
+  - slug: layered-agent-memory
+    title: "Layered Agent Memory"
+    tags: [llm-agents, multi-agent-systems, memory, agent-architecture]
+    maturity: emerging
+  - slug: live-multi-market-trading-benchmark
+    title: "Live Multi-Market Trading Benchmark"
+    tags: [llm-agents, multi-agent-systems, financial-trading, benchmarking, live-trading]
+    maturity: emerging
   - slug: llm-based-multi-agent-systems
     title: "LLM-based Multi-Agent Systems"
     tags: [multi-agent-systems, llm-agents, collective-intelligence, agent-collaboration]
     maturity: active
+  - slug: llm-conditioned-risk-sensitive-reinforcement-learning
+    title: "LLM-Conditioned Risk-Sensitive Reinforcement Learning"
+    tags: [reinforcement-learning, llm-agents, financial-trading, risk-management, cvar]
+    maturity: emerging
   - slug: llm-multi-agent-financial-trading
     title: "LLM Multi-Agent Financial Trading"
     tags: [multi-agent-systems, llm-agents, financial-trading, algorithmic-trading]
+    maturity: emerging
+  - slug: llm-policy-reinforcement-learning
+    title: "LLM-as-Policy Reinforcement Learning"
+    tags: [reinforcement-learning, llm-agents, financial-trading, parameter-efficient-fine-tuning, policy-gradient]
     maturity: emerging
   - slug: metocean-forecasting
     title: "Metocean Forecasting"
@@ -247,6 +311,10 @@ concepts:
     title: "Multimodal Large Language Model"
     tags: [vision-language, multimodal, large-language-models]
     maturity: active
+  - slug: order-level-dual-mode-trading-simulation
+    title: "Order-Level Dual-Mode Trading Simulation"
+    tags: [llm-agents, multi-agent-systems, financial-trading, simulation, market-microstructure, order-book, benchmark]
+    maturity: emerging
   - slug: persona-driven-prompting
     title: "Persona-Driven Prompting"
     tags: [llm-agents, prompt-engineering, behavioral-ai, multi-agent-systems]
@@ -255,6 +323,14 @@ concepts:
     title: "Retrieval-Augmented Generation"
     tags: [rag, llm, information-retrieval, nlp, grounded-generation]
     maturity: active
+  - slug: reward-labeled-case-reflection
+    title: "Reward-Labeled Case Reflection"
+    tags: [llm-agents, multi-agent-systems, financial-trading, self-reflection, post-training]
+    maturity: emerging
+  - slug: simulated-trading-dual-reward-mechanism
+    title: "Simulated Trading Dual-Reward Mechanism"
+    tags: [llm-agents, multi-agent-systems, financial-trading, reinforcement-learning, simulated-trading]
+    maturity: emerging
   - slug: trust-calibration-human-ai-collaboration
     title: "Trust Calibration in Human-AI Collaboration"
     tags: [human-ai-collaboration, trust, decision-making, explainable-ai]
@@ -295,9 +371,15 @@ people:
   - slug: deyao-zhu
     kind: researcher
     affiliation: "King Abdullah University of Science and Technology (KAUST)"
+  - slug: flora-salim
+    kind: researcher
+    affiliation: "University of New South Wales"
   - slug: harang-ju
     kind: researcher
     affiliation: "Johns Hopkins Carey Business School"
+  - slug: jimin-huang
+    kind: researcher
+    affiliation: "The FinAI; National Centre for Text Mining, University of Manchester"
   - slug: johannes-schneider
     kind: researcher
     affiliation: "University of Liechtenstein"
@@ -313,6 +395,9 @@ people:
   - slug: mohamed-elhoseiny
     kind: researcher
     affiliation: "King Abdullah University of Science and Technology (KAUST)"
+  - slug: qianqian-xie
+    kind: researcher
+    affiliation: "The FinAI"
   - slug: sinan-aral
     kind: researcher
     affiliation: "MIT Sloan School of Management"
@@ -325,30 +410,87 @@ people:
   - slug: xiangliang-zhang
     kind: researcher
     affiliation: "University of Notre Dame"
+  - slug: xiangmin-xu
+    kind: researcher
+    affiliation: "South China University of Technology"
+  - slug: yebo-feng
+    kind: researcher
+    affiliation: "Nanyang Technological University"
   - slug: zhiyuan-liu
     kind: researcher
     affiliation: "Tsinghua University"
 
 ideas:
+  - slug: grpo-fine-tuning-korean-financial-llm
+    title: "QuantAgent-RL: Online RL Adaptation for KOSPI Technical Analysis Signals"
+    tags: [rl, llm, kospi, technical-analysis, online-rl]
+    status: failed
+    priority: 1
+  - slug: hierarchical-sector-rotation-rl-kospi-cot
+    title: "HiSeRA: Hierarchical Sector-Rotation RL Combining CoT ETF Framework and Timed Sub-Agents"
+    tags: [rl, llm, kospi, hierarchical-rl, sector-rotation, multi-agent, korean-market]
+    status: proposed
+    target_venue: "NeurIPS 2026 / ICAIF 2026"
+    priority: 3
+  - slug: kospi-cot-rl-grpo
+    title: "KOSPI CoT-RL: GRPO Feedback Loop for Korean ETF Allocation"
+    tags: [rl, llm, kospi, etf, grpo, korean-market, chain-of-thought]
+    status: proposed
+    target_venue: "ICLR 2027 / EMNLP 2026"
+    priority: 4
+  - slug: kospi-information-diet-vs-reasoning-scaffold
+    title: "Information Diet vs Reasoning Scaffold: Ablating What Actually Transfers When US LLM Trading Agents Move to KOSPI"
+    tags: [kospi, llm-multi-agent-financial-trading, ablation-study, market-transfer, information-channels, evaluation-methodology, korean-market]
+    status: proposed
+    target_venue: "ICAIF 2026 / EMNLP 2026 (FinNLP) / NeurIPS 2026 Workshop on Generative AI in Finance"
+    priority: 3
+  - slug: kospi-r1-bilingual-llm-trader
+    title: "KOSPI-R1: Korean-Native Bilingual RL Trading LLM"
+    tags: [rl, llm, kospi, korean-language, bilingual, fine-tuning]
+    status: failed
+    priority: 1
+  - slug: kospi-regime-adaptive-dag-rl-trading
+    title: "KOSPI Regime-Aware Dynamic DAG-RL: RL Meta-Agent for Adaptive Orchestration Topology"
+    tags: [rl, llm, kospi, multi-agent, dag-orchestration, regime-detection, meta-rl]
+    status: proposed
+    target_venue: "NeurIPS 2026 / AAAI 2027"
+    priority: 4
+  - slug: transfer-triple-barrier-rl-kospi-price
+    title: "Process Reward Model Transfer from Math Reasoning to KOSPI Trade Step Verification"
+    tags: [rl, llm, kospi, process-reward-model, reward-shaping]
+    status: failed
+    priority: 1
 
 methods:
+  - slug: agent-market-arena-framework
+    tags: [multi-agent-systems, llm-agents, financial-trading, benchmarking, live-trading]
+    type: benchmark
   - slug: agentverse-framework
     tags: [multi-agent-systems, llm-agents, collaboration, autonomous-agents]
     type: system
   - slug: assertion-based-benchmarking
-    title: "Assertion-Based Benchmarking"
     tags: [evaluation, multi-agent-systems, llm-evaluation, benchmarking]
     type: evaluation
   - slug: cot-based-llm-etf-allocation-framework
     tags: [llm, chain-of-thought, portfolio-management, etf, finance, news-analysis]
     type: prompting
+  - slug: cryptomas-framework
+    tags: [multi-agent-systems, llm-agents, financial-trading, portfolio-management, cryptocurrency]
+    type: system
   - slug: dag-based-agent-orchestration
-    title: "DAG-Based Agent Orchestration"
     tags: [multi-agent-systems, orchestration, dag, financial-ai]
-    type: framework
+    type: system
   - slug: digital-knowledge-twin-system
-    title: "Digital Knowledge Twin System"
     tags: [knowledge-management, tacit-knowledge, generative-ai, digital-twin, multimodal]
+    type: system
+  - slug: fincon-framework
+    tags: [multi-agent-systems, llm-agents, financial-trading, portfolio-management, risk-control, verbal-reinforcement]
+    type: system
+  - slug: flag-trader-architecture
+    tags: [reinforcement-learning, llm-agents, financial-trading, parameter-efficient-fine-tuning, policy-gradient, ppo]
+    type: architecture
+  - slug: hedgeagents-framework
+    tags: [multi-agent-systems, llm-agents, financial-trading, portfolio-management, risk-control, hedging]
     type: system
   - slug: horizon-adaptive-decoding
     tags: [time-series-forecasting, transformer, multi-horizon, horizon-adaptive, randomized-training]
@@ -360,9 +502,11 @@ methods:
     tags: [llm-agents, planning, pddl, reasoning, finance]
     type: architecture
   - slug: llm-based-collaboration-analysis
-    title: "LLM-Based Collaboration Analysis"
     tags: [collaboration-analysis, qualitative-coding, llm-evaluation, human-ai-collaboration]
-    type: analysis
+    type: evaluation
+  - slug: llm-infused-cvar-ppo
+    tags: [reinforcement-learning, financial-trading, risk-management, cvar, llm-signal-generation]
+    type: training
   - slug: llm-ma-taxonomy
     tags: [multi-agent-systems, llm-agents, survey-methodology, system-design]
     type: protocol
@@ -387,14 +531,23 @@ methods:
   - slug: quantagent-multi-agent-trading-system
     tags: [multi-agent, LLM, high-frequency-trading, technical-analysis, quantitative-finance]
     type: system
+  - slug: quantagents-framework
+    tags: [multi-agent-systems, llm-agents, financial-trading, portfolio-management, risk-control, simulated-trading]
+    type: system
   - slug: rag-financial-qa
     tags: [rag, financial-literacy, qa-system, prompt-engineering, dense-retrieval, domain-specific]
     type: system
   - slug: rag-multi-agent-stock-analysis
     tags: [financial-ai, multi-agent-systems, retrieval-augmented-generation, stock-analysis, llm-application]
     type: system
+  - slug: reward-guided-post-training-data-synthesis
+    tags: [llm-agents, financial-trading, data-synthesis, post-training, reward-filtering, parameter-efficient-fine-tuning]
+    type: data
   - slug: role-based-multi-ai-agent-stock
     tags: [financial-ai, multi-agent-systems, llm-agents, prompt-engineering, stock-analysis, retrieval-augmented-generation]
+    type: system
+  - slug: stocksim-framework
+    tags: [multi-agent-systems, llm-agents, financial-trading, simulation, benchmark, evaluation, system, market-microstructure]
     type: system
   - slug: three-level-meta-analytic-model
     tags: [meta-analysis, statistics, effect size, systematic review]
@@ -403,8 +556,13 @@ methods:
     tags: [multi-agent-systems, topology, agent-selection, graph-learning, optimization]
     type: system
   - slug: tradingagents-framework
-    title: "TradingAgents Framework"
     tags: [multi-agent-systems, llm-agents, financial-trading, agentic-debate, role-specialization]
+    type: system
+  - slug: tradinggpt-framework
+    tags: [multi-agent-systems, llm-agents, financial-trading, agentic-debate, agent-memory, persona-driven-prompting]
+    type: system
+  - slug: tradinggroup-framework
+    tags: [multi-agent-systems, llm-agents, financial-trading, self-reflection, risk-management, algorithmic-trading]
     type: system
   - slug: tree-thoughts
     tags: [reasoning, planning, search, llm, agentic-ai]

@@ -6,8 +6,10 @@ maturity: active
 definition: "A framework that enhances LLM generation by first retrieving relevant documents from an external corpus and conditioning the generation on that retrieved context, reducing hallucination and enabling knowledge grounding without full model retraining."
 key_papers:
   - "[[research-building-system-improve-financial-literacy]]"
+  - "[[generative-agentic-ai-survey-conceptualization-challenges]]"
+  - "[[llm-powered-multi-agent-system-automated]]"
 first_introduced: "Lewis et al., 2020 (Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks)"
-date_updated: 2026-05-29
+date_updated: 2026-08-22
 related_concepts: []
 linked_ideas: []
 ---

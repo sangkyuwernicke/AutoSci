@@ -14,6 +14,8 @@ maturity: active
 definition: "A paradigm in which multiple autonomous agents work together — sharing information, distributing subtasks, and collectively making decisions — to accomplish goals that are difficult or impossible for a single agent to achieve alone. In LLM-based systems, collaboration is typically structured through communication protocols (horizontal or vertical), role assignment, and shared evaluation."
 key_papers:
   - "[[agentverse-facilitating-multi-agent-collaboration-exploring]]"
+  - "[[persona-driven-llm-interaction-stock-market]]"
+  - "[[towards-effective-genai-multi-agent-collaboration]]"
 first_introduced: "Multi-agent systems research predates LLMs; LLM-based collaborative agents emerged prominently in 2023."
 date_updated: 2026-05-29
 related_concepts:

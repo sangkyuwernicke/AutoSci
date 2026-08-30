@@ -25,7 +25,8 @@ datasets:
   - Logic Grid Puzzles
   - HumanEval
 code_url: "https://github.com/OpenBMB/AgentVerse/"
-cited_by: []
+cited_by:
+  - "[[fincon-synthesized-llm-multi-agent-system]]"
 ---
 
 ## Problem & Context

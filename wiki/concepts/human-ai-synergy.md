@@ -12,6 +12,7 @@ maturity: active
 definition: "The condition where a human-AI combination outperforms both the human alone and the AI alone — analogous to strong synergy in human groups."
 key_papers:
   - "[[when-combinations-humans-ai-useful]]"
+  - "[[when-combinations-humans-ai-useful-systematic]]"
 first_introduced: "Vaccaro et al. 2024 (arXiv 2405.06087)"
 date_updated: 2026-05-29
 related_concepts:

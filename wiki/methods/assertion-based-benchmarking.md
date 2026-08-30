@@ -1,5 +1,5 @@
 ---
-title: Assertion-Based Benchmarking
+name: Assertion-Based Benchmarking
 slug: assertion-based-benchmarking
 tags:
   - evaluation

@@ -13,6 +13,7 @@ maturity: active
 definition: The joint execution of tasks by human participants and AI systems working within a shared workspace, where both agents can observe, contribute to, and modify shared artifacts in real time. Distinguished from AI-as-tool paradigms by the AI's capacity for autonomous action, communication, and adaptive participation in the work process.
 key_papers:
   - "[[collaborating-ai-agents-field-experiment-teamwork]]"
+  - "[[tacit-knowledge-management-generative-ai-proposal]]"
 first_introduced: "2020s (emerging with LLM-based agents)"
 date_updated: 2026-05-29
 related_concepts:

@@ -14,8 +14,9 @@ maturity: stable
 definition: "A prompting and training paradigm that elicits intermediate reasoning steps from language models before producing a final answer, enabling more accurate and interpretable solutions to multi-step problems."
 key_papers:
   - generative-agentic-ai-survey-conceptualization-challenges
+  - llm-powered-multi-agent-system-automated
 first_introduced: "2022"
-date_updated: 2026-05-29
+date_updated: 2026-08-22
 related_concepts:
   - agentic-ai
   - retrieval-augmented-generation

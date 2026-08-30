@@ -12,8 +12,9 @@ maturity: active
 definition: "The mechanisms, structures, and content by which agents in a multi-agent system exchange information to coordinate behavior, share knowledge, and reach collective decisions."
 key_papers:
   - "[[large-language-model-based-multi-agents]]"
+  - "[[llm-powered-multi-agent-system-automated]]"
 first_introduced: "2023"
-date_updated: 2026-05-29
+date_updated: 2026-08-22
 related_concepts:
   - "[[llm-based-multi-agent-systems]]"
   - "[[agent-capability-acquisition]]"
@@ -66,6 +67,8 @@ Just as human teams have different meeting formats (brainstorming, debate, hiera
 Builds on distributed systems communication theory and speech-act theory (Austin/Searle). In LLM contexts, communication is implemented as natural language prompts, inheriting all the ambiguity and expressiveness of language.
 
 ## Realized by
+
+- [[cryptomas-framework]]
 
 ## My understanding
 
