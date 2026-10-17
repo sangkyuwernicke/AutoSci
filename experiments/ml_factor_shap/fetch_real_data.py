@@ -86,8 +86,13 @@ def fetch_macro(out):
 IS_MAP = {"ifrs-full_Revenue": "sales", "ifrs-full_GrossProfit": "gross_profit",
           "dart_OperatingIncomeLoss": "op_income",
           "ifrs-full_ProfitLossAttributableToOwnersOfParent": "net_income",
-          "ifrs-full_FinanceCosts": "interest_expense"}   # proxy: finance costs, not pure interest
-CF_MAP = {"ifrs-full_CashFlowsFromUsedInOperatingActivities": "cfo"}
+          "ifrs-full_FinanceCosts": "interest_expense",   # proxy: finance costs, not pure interest
+          # R&D: no single standard tag. Only some firms show it on the face of the statement; the
+          # rest disclose it in the notes / business report (use the name fallback below, else 0).
+          "ifrs-full_ResearchAndDevelopmentExpense": "rd"}
+CF_MAP = {"ifrs-full_CashFlowsFromUsedInOperatingActivities": "cfo",
+          "ifrs-full_PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities": "capex"}
+RD_NAME_HINTS = ("연구개발비", "경상연구개발", "경상개발비")   # account_nm fallback for "rd"
 BS_MAP = {"ifrs-full_Equity": "equity", "ifrs-full_Assets": "assets", "ifrs-full_Liabilities": "liabilities",
           "ifrs-full_CurrentAssets": "current_assets", "ifrs-full_CurrentLiabilities": "current_liabilities",
           "ifrs-full_Inventories": "inventory", "ifrs-full_CashAndCashEquivalents": "cash",
@@ -119,18 +124,22 @@ def fetch_fundamentals(out, tickers=None):
                 rec = {"filing_date": filed}
                 for _, a in fs.iterrows():
                     for mp in (IS_MAP, CF_MAP, BS_MAP):
-                        if a["account_id"] in mp:
+                        hit = a["account_id"] in mp or (mp is IS_MAP and any(h in str(a["account_nm"]) for h in RD_NAME_HINTS))
+                        if hit:
+                            key = mp.get(a["account_id"], "rd")
                             # IS in the H1/Q3 reports: thstrm_amount is the 3-month figure, the
                             # cumulative one is thstrm_add_amount. Everything else is already YTD/point-in-time.
                             col = "thstrm_add_amount" if (mp is IS_MAP and months in (6, 9)) else "thstrm_amount"
-                            rec[mp[a["account_id"]]] = _amt(a[col])
+                            rec.setdefault(key, _amt(a[col]))
                 ytd[(year, months)] = rec
         for (year, months), rec in ytd.items():              # YTD -> stand-alone quarter
             prev = ytd.get((year, months - 3))
             row = {"ticker": t, "period_end": pd.Timestamp(year, months, 1) + pd.offsets.MonthEnd(0),
                    "filing_date": rec["filing_date"]}
+            if months == 12:                                  # annual R&D intensity inputs (full-year figures)
+                row["sales_annual"], row["rd_annual"] = rec.get("sales"), rec.get("rd")
             for k, v in rec.items():
-                if k == "filing_date":
+                if k in ("filing_date", "rd"):                # rd is annual-only; not turned into quarters
                     continue
                 row[k] = v - prev.get(k, 0) if (k in IS_MAP.values() or k in CF_MAP.values()) and prev else v
             rows.append(row)

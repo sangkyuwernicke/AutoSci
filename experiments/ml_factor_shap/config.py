@@ -1,6 +1,6 @@
 """Shared constants for the ML factor x macro excess-return experiment."""
 
-FIRM_FACTORS = [
+BASE_FACTORS = [
     # Value
     "PER", "PBR", "PCR", "EV_EBITDA",
     # Profitability
@@ -12,19 +12,28 @@ FIRM_FACTORS = [
     # Momentum / technical
     "RET_1M", "RET_3M", "RET_12M", "VOL_20D",
 ]
+# Additional momentum / technical
+MOMENTUM_EXTRA = ["RET_6M", "MOM_12_1", "DIST_52W_HIGH"]
+# Reinvestment / future-growth proxies from filed statements
+GROWTH_INVEST = ["RD_INTENSITY", "RD_GROWTH", "CAPEX_INTENSITY", "ASSET_GROWTH"]
+# Analyst-consensus based (point-in-time consensus file required)
+FORWARD_FACTORS = ["FWD_PER", "FWD_EPS_GROWTH", "FWD_SALES_GROWTH", "EST_REVISION_3M"]
+EXTENDED_FACTORS = BASE_FACTORS + MOMENTUM_EXTRA + GROWTH_INVEST + FORWARD_FACTORS
+FACTOR_SETS = {"base": BASE_FACTORS, "extended": EXTENDED_FACTORS}
+FIRM_FACTORS = BASE_FACTORS          # default (the plan's original 17)
+
 MACRO = ["BASE_RATE", "TERM_SPREAD", "CPI_YOY", "KRWUSD", "VKOSPI"]
 ALL_FEATURES = FIRM_FACTORS + MACRO
 
 # Value ratios are rank-transformed on their inverse (E/P, B/P, ...) so that
 # loss-making firms (negative PER) sort to the bottom instead of the top.
-INVERT_BEFORE_RANK = ["PER", "PBR", "PCR", "EV_EBITDA"]
+INVERT_BEFORE_RANK = ["PER", "PBR", "PCR", "EV_EBITDA", "FWD_PER"]
 
 # Macro variables used to define regimes for the SHAP analysis (H3).
 REGIME_VARS = {"BASE_RATE": "rate", "TERM_SPREAD": "spread", "CPI_YOY": "inflation"}
 
 MODELS = ["logit", "ridge", "dtree", "rf", "xgb", "lgbm", "catboost"]
 TREE_MODELS = ["rf", "xgb", "lgbm", "catboost"]
-FEATURE_SETS = {"full": ALL_FEATURES, "firm": FIRM_FACTORS}
 
 # ECOS statistic codes (BoK). Verify against https://ecos.bok.or.kr before use.
 ECOS_SERIES = {

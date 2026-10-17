@@ -55,6 +55,7 @@ def make_synthetic_panel(n_stocks=300, seed=0, start="2013-12-31", end="2025-12-
     for t in range(1, T):
         lat[t] = phi * lat[t - 1] + np.sqrt(1 - phi ** 2) * rng.normal(size=(N, K))
     stock_vol = np.exp(rng.normal(0, 0.3, N))
+    rd_reporter = rng.random(N) < 0.6          # most Korean firms report no separate R&D
 
     R = np.zeros((T + H, N))                      # R[H+k] = return over month after date k
     R[:H] = rng.normal(0.005, 0.08, (H, N))       # pre-sample history for momentum
@@ -64,6 +65,10 @@ def make_synthetic_panel(n_stocks=300, seed=0, start="2013-12-31", end="2025-12-
         hist = R[k:H + k]                         # the 12 months realised up to date k
         r1, r3 = hist[-1], np.prod(1 + hist[-3:], axis=0) - 1
         r12 = np.prod(1 + hist, axis=0) - 1
+        r6 = np.prod(1 + hist[-6:], axis=0) - 1
+        mom12_1 = np.prod(1 + hist[:-1], axis=0) - 1
+        path = np.cumprod(1 + hist, axis=0)
+        dist52 = path[-1] / path.max(0) - 1
         m3 = (r3 - r3.mean()) / (r3.std() + 1e-9)
 
         m = macro.iloc[k]
@@ -76,9 +81,11 @@ def make_synthetic_panel(n_stocks=300, seed=0, start="2013-12-31", end="2025-12-
 
         e = lambda sd=0.25: rng.normal(0, sd, N)
         vol = stock_vol * 0.02 * (m.VKOSPI / 18) * np.exp(e(0.2))
+        per = 12 * np.exp(-0.5 * v + e())
+        g3 = lat[max(k - 3, 0), :, 2]
         f = pd.DataFrame({
             "date": dates[k], "ticker": [f"S{i:04d}" for i in range(N)],
-            "PER": 12 * np.exp(-0.5 * v + e()), "PBR": 1.0 * np.exp(-0.5 * v + e()),
+            "PER": per, "PBR": 1.0 * np.exp(-0.5 * v + e()),
             "PCR": 8 * np.exp(-0.5 * v + e()), "EV_EBITDA": 8 * np.exp(-0.4 * v + e()),
             "ROE": 0.08 + 0.06 * p + 0.03 * e(1), "ROA": 0.04 + 0.03 * p + 0.015 * e(1),
             "OPM": 0.07 + 0.05 * p + 0.03 * e(1), "GPOA": 0.25 + 0.1 * p + 0.05 * e(1),
@@ -86,6 +93,16 @@ def make_synthetic_panel(n_stocks=300, seed=0, start="2013-12-31", end="2025-12-
             "DEBT_RATIO": 100 * np.exp(-0.4 * q + e()), "QUICK_RATIO": 1.2 * np.exp(0.3 * q + e()),
             "ICR": 5 * np.exp(0.6 * q + e(0.4)),
             "RET_1M": r1, "RET_3M": r3, "RET_12M": r12, "VOL_20D": vol,
+            "RET_6M": r6, "MOM_12_1": mom12_1, "DIST_52W_HIGH": dist52,
+            # forward-looking / reinvestment proxies: noisy readings of the growth latent g
+            "FWD_PER": per * np.exp(-0.35 * g + e(0.2)),
+            "FWD_EPS_GROWTH": 0.08 + 0.25 * g + 0.1 * e(1),
+            "FWD_SALES_GROWTH": 0.05 + 0.1 * g + 0.05 * e(1),
+            "EST_REVISION_3M": 0.1 * (g - g3) + 0.03 * e(1),
+            "RD_INTENSITY": np.where(rd_reporter, 0.03 * np.exp(0.5 * g + 0.5 * e(1)), 0.0),
+            "RD_GROWTH": 0.05 + 0.15 * g + 0.1 * e(1),
+            "CAPEX_INTENSITY": 0.05 * np.exp(0.3 * g + 0.4 * e(1)),
+            "ASSET_GROWTH": 0.06 + 0.1 * g + 0.05 * e(1),
         })
         for c in MACRO:
             f[c] = m[c]

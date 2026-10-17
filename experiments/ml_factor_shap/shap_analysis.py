@@ -10,7 +10,7 @@ import warnings
 from scipy.stats import spearmanr
 
 warnings.filterwarnings("ignore", message=".*TreeExplainer shap values output has changed.*")
-from config import ALL_FEATURES, FIRM_FACTORS, MACRO
+from config import MACRO
 
 
 def fold_shap(model, X, n_inter=2000, seed=0):
@@ -28,12 +28,12 @@ def fold_shap(model, X, n_inter=2000, seed=0):
     return pd.DataFrame(sv, columns=X.columns, index=X.index), idx, iv
 
 
-def interaction_matrix(iv):
+def interaction_matrix(iv, all_features, firm_factors):
     """Mean |interaction| (both triangles summed), macro rows x firm columns."""
     m = np.abs(iv).mean(0) * 2
-    ix = {f: i for i, f in enumerate(ALL_FEATURES)}
-    return pd.DataFrame([[m[ix[a], ix[b]] for b in FIRM_FACTORS] for a in MACRO],
-                        index=MACRO, columns=FIRM_FACTORS)
+    ix = {f: i for i, f in enumerate(all_features)}
+    return pd.DataFrame([[m[ix[a], ix[b]] for b in firm_factors] for a in MACRO],
+                        index=MACRO, columns=firm_factors)
 
 
 def regime_analysis(sv, Xf, dates, high, n_perm=2000, seed=0):
@@ -73,7 +73,7 @@ def regime_analysis(sv, Xf, dates, high, n_perm=2000, seed=0):
 # --------------------------------------------------------------------------- plots
 def plot_summary(sv, X, path, max_rows=5000):
     idx = np.random.default_rng(0).choice(len(X), min(max_rows, len(X)), replace=False)
-    shap.summary_plot(sv.to_numpy()[idx], X.iloc[idx], show=False, max_display=len(ALL_FEATURES))
+    shap.summary_plot(sv.to_numpy()[idx], X.iloc[idx], show=False, max_display=min(25, X.shape[1]))
     plt.tight_layout(); plt.savefig(path, dpi=150); plt.close()
 
 
@@ -98,7 +98,7 @@ def plot_interaction_heatmap(mat, path):
 
 
 def plot_pair_scatter(iv, Xsub, firm, macro, path):
-    ix = {f: i for i, f in enumerate(ALL_FEATURES)}
+    ix = {f: i for i, f in enumerate(Xsub.columns)}
     val = 2 * iv[:, ix[firm], ix[macro]]
     fig, ax = plt.subplots(figsize=(6, 4.5))
     sc = ax.scatter(Xsub[firm], val, c=Xsub[macro], s=6, cmap="coolwarm")

@@ -11,6 +11,10 @@ python run_experiment.py --data synthetic --trials 10 --out results/synth
 python fetch_real_data.py prices|macro|fundamentals --out data/real     # UNTESTED, see header
 python run_experiment.py --data real --raw-dir data/real --trials 50 --out results/real
 python tests/test_lookahead.py                                          # filing-date / macro-lag guards
+python tests/test_forward.py                                            # consensus / R&D / momentum guards
+# extended factor set (adds forward-looking + reinvestment + momentum factors)
+python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6
+python run_experiment.py --data real --raw-dir data/real --factor-set extended --min-mcap-pct 5 --out results/real_ext
 ```
 
 | file | role |
@@ -19,11 +23,35 @@ python tests/test_lookahead.py                                          # filing
 | `data_synth.py` | synthetic panel (factor payoffs depend on rate / curve regime, value×quality interaction) |
 | `data_real.py` | raw files → panel; fundamentals joined on **filing date**, macro lagged to end of t‑1 |
 | `fetch_real_data.py` | FinanceDataReader / pykrx / ECOS / Open DART collectors (untested) |
+| `prepare_consensus.py` | validates/normalises a vendor point-in-time consensus export → `consensus.parquet` |
+| `data_quality.py` | per-factor missing / zero / outlier / coverage report (`data_quality.csv`) |
 | `features.py` | target, per-month winsorize (1/99) + rank-gauss or z-score |
 | `models.py` | Logit(L1/L2), Ridge, Tree, RF, XGB, LGBM, CatBoost + Optuna spaces |
 | `evaluation.py` | AUC, PR-AUC, Precision@20 %, backtest, H1 paired tests, H2 block bootstrap |
 | `shap_analysis.py` | SHAP, regime comparison with permutation test, macro×firm interactions |
 | `run_experiment.py` | orchestration → `results/<run>/report.md` + csv/png |
+
+## Extended factors (`--factor-set extended`)
+
+| group | factors | source / definition |
+|---|---|---|
+| momentum | `RET_6M`, `MOM_12_1`, `DIST_52W_HIGH` | month-end prices; 12M return skipping the last month; close / 252-day high − 1 |
+| reinvestment | `RD_INTENSITY`, `RD_GROWTH` | annual-report R&D ÷ annual sales, YoY R&D growth; usable from the annual filing date; firms with statements but no R&D line get 0 |
+| | `CAPEX_INTENSITY`, `ASSET_GROWTH` | TTM PP&E purchases ÷ TTM sales; YoY total-asset growth |
+| forward-looking | `FWD_PER` | market cap ÷ 12M-forward consensus net income, (12−m)/12·FY(t) + m/12·FY(t+1) |
+| | `FWD_EPS_GROWTH`, `FWD_SALES_GROWTH` | forward estimate vs. trailing-12M actual |
+| | `EST_REVISION_3M` | change in the *same fiscal year's* estimate vs. 3 months earlier |
+
+Factors whose inputs are absent are skipped with a warning, so the pipeline runs with or without
+`consensus.parquet` / `capex` / R&D.
+
+Look-ahead rules for the new inputs: consensus snapshots are used only if dated ≤ t and ≤ 45 days old
+(`consensus_lag_days` in `build_panel` adds a conservative publication lag); free sources (e.g. Naver
+Finance) show only the *current* consensus, which would leak today's estimates into history, so a
+point-in-time vendor history (FnGuide/DataGuide, Refinitiv) is required. Realised future earnings must
+never stand in for estimates. Vendors sometimes back-fill or restate estimates; spot-check a few dates.
+R&D is rarely a standard DART line item (`fetch_real_data.py` matches `ifrs-full_ResearchAndDevelopmentExpense`
+and Korean name hints) — check coverage in `data_quality.csv` before interpreting `RD_*`.
 
 ## Design decisions to review
 
