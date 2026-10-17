@@ -14,7 +14,7 @@ from sklearn.metrics import roc_auc_score
 
 import evaluation as ev
 import shap_analysis as sa
-from config import ALL_FEATURES, FEATURE_SETS, FIRM_FACTORS, MACRO, MODELS, REGIME_VARS
+from config import FACTOR_SETS, MACRO, MODELS, REGIME_VARS
 from features import add_target, cross_sectional_transform
 from models import build, score, tune
 
@@ -34,6 +34,9 @@ def parse():
     a.add_argument("--test-end", type=int, default=2025)
     a.add_argument("--target-margin", type=float, default=0.0,
                    help="y=1 iff R_i - R_m > margin (e.g. 0.03 for a rarer positive class)")
+    a.add_argument("--factor-set", choices=list(FACTOR_SETS), default="base",
+                   help="base = plan's 17 factors; extended adds momentum/R&D/capex/forward-looking factors")
+    a.add_argument("--min-mcap-pct", type=float, default=0.0, help="real data: drop the smallest x%% by market cap each month")
     a.add_argument("--scale", choices=["quantile", "zscore"], default="quantile")
     a.add_argument("--top-q", type=float, default=0.2)
     a.add_argument("--cost", type=float, default=0.002, help="applied to sum|dw| each rebalance")
@@ -48,7 +51,7 @@ def load(args):
         from data_synth import make_synthetic_panel
         return make_synthetic_panel(args.n_stocks, args.seed)
     from data_real import build_panel
-    return build_panel(args.raw_dir)
+    return build_panel(args.raw_dir, min_mcap_pct=args.min_mcap_pct)
 
 
 def fmt(df, nd=4):
@@ -60,9 +63,18 @@ def main():
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
 
-    panel = add_target(load(args), args.target_margin)
+    raw = load(args)
+    firm_cols = [c for c in FACTOR_SETS[args.factor_set] if c in raw.columns]
+    missing = [c for c in FACTOR_SETS[args.factor_set] if c not in raw.columns]
+    if missing:
+        print(f"WARNING: factors not available in this panel and skipped: {missing}")
+    feature_sets = {"full": firm_cols + MACRO, "firm": firm_cols}
+    if args.data == "real":
+        from data_quality import quality_report
+        quality_report(raw, firm_cols + MACRO).to_csv(out / "data_quality.csv")
+    panel = add_target(raw, args.target_margin)
     panel = panel[panel.label_year >= args.train_start]
-    panel = cross_sectional_transform(panel, FIRM_FACTORS, method=args.scale)
+    panel = cross_sectional_transform(panel, firm_cols, method=args.scale)
     print(f"panel: {len(panel):,} rows, {panel.ticker.nunique()} tickers, "
           f"label years {panel.label_year.min()}-{panel.label_year.max()}, "
           f"positive rate {panel.y.mean():.3f}")
@@ -79,7 +91,7 @@ def main():
         if te.empty:
             continue
         print(f"\n=== test {Y}: train {len(tr):,} / val {len(va):,} / test {len(te):,}")
-        for fset, cols in FEATURE_SETS.items():
+        for fset, cols in feature_sets.items():
             for name in args.models:
                 t1 = time.time()
                 bp, bv = tune(name, tr[cols], tr.y, va[cols], va.y, args.trials, args.seed, args.n_jobs)
@@ -145,12 +157,12 @@ def main():
         monthly = X_all.groupby("date")[list(REGIME_VARS)].first()
         flags = pd.DataFrame({v: X_all[v] > monthly[v].median() for v in REGIME_VARS})
         sv_all.to_parquet(out / "shap_values.parquet")
-        sa.plot_summary(sv_all, X_all[ALL_FEATURES], out / "shap_summary.png")
+        sa.plot_summary(sv_all, X_all[feature_sets["full"]], out / "shap_summary.png")
         imp = sv_all.abs().mean().sort_values(ascending=False)
         imp.to_csv(out / "shap_global_importance.csv")
         h3_text += "Global mean|SHAP| (top 10):\n" + fmt(imp.head(10).to_frame("mean_abs_shap")) + "\n"
         for var, tag in REGIME_VARS.items():
-            tab, summ = sa.regime_analysis(sv_all[FIRM_FACTORS], X_all[FIRM_FACTORS], X_all["date"],
+            tab, summ = sa.regime_analysis(sv_all[firm_cols], X_all[firm_cols], X_all["date"],
                                            flags[var], args.n_perm, args.seed)
             tab.sort_values("imp_high", ascending=False).to_csv(out / f"shap_regime_{tag}.csv")
             sa.plot_regime_bars(tab, var, out / f"shap_regime_{tag}.png")
@@ -160,7 +172,7 @@ def main():
                         f"sign flips={int(tab.sign_flip.sum())}/{len(tab)}\n"
                         + fmt(tab.sort_values("imp_high", ascending=False).head(8)) + "\n")
         iv = np.concatenate([p[0] for p in inter_parts]); Xi = pd.concat([p[1] for p in inter_parts])
-        mat = sa.interaction_matrix(iv)
+        mat = sa.interaction_matrix(iv, feature_sets["full"], firm_cols)
         mat.to_csv(out / "shap_interaction_macro_x_firm.csv")
         sa.plot_interaction_heatmap(mat, out / "shap_interaction_heatmap.png")
         sa.plot_pair_scatter(iv, Xi, "PBR", "BASE_RATE", out / "shap_interaction_PBR_x_BASE_RATE.png")
