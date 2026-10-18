@@ -4,7 +4,7 @@ Written against the public APIs but never run (it needs DART/ECOS keys and netwo
 not available when this was authored). Expect to fix column names / series codes on first run, and
 spot-check a few tickers against the DART viewer before trusting any number.
 
-    export DART_KEY=... ECOS_KEY=...
+    put DART_KEY=... and ECOS_KEY=... in the repo-root .env (git-ignored) or ~/.env, or export them
     python fetch_real_data.py prices   --out data/real
     python fetch_real_data.py macro    --out data/real
     python fetch_real_data.py fundamentals --out data/real
@@ -18,6 +18,23 @@ import requests
 
 from config import ECOS_SERIES
 
+
+
+def _load_env():
+    """Read KEY=VALUE lines from ~/.env and the repo-root .env (found by walking up from this file).
+    Variables already set in the environment are never overwritten."""
+    here = Path(__file__).resolve()
+    for f in [Path.home() / ".env"] + [d / ".env" for d in here.parents]:
+        if not f.is_file():
+            continue
+        for line in f.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
+
+
+_load_env()
 START, END = "2012-01-01", "2025-12-31"   # 2 years of warm-up for 12M momentum / YoY growth
 
 
