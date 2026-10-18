@@ -15,7 +15,7 @@ from sklearn.metrics import roc_auc_score
 import evaluation as ev
 import shap_analysis as sa
 from config import FACTOR_SETS, MACRO, MODELS, REGIME_VARS
-from features import add_target, cross_sectional_transform
+from features import add_target, cross_sectional_transform, macro_to_regime
 from models import build, score, tune
 
 
@@ -53,10 +53,18 @@ def parse():
     a.add_argument("--market", choices=["ALL", "KOSPI", "KOSDAQ"], default="ALL",
                    help="real data: restrict the universe and the benchmark index to one market")
     a.add_argument("--start-date", default=None, help="drop feature dates before this (YYYY-MM-DD)")
+    a.add_argument("--small-data", action="store_true",
+                   help="few thousand training rows: shallow/regularised search space and, unless --models is "
+                        "given, only logit, lgbm and catboost (fewer comparisons)")
+    a.add_argument("--macro-mode", choices=["raw", "regime"], default="raw",
+                   help="regime: macro levels -> 1/0/0.5 vs their expanding median (no look-ahead), so trees "
+                        "cannot memorise which month a row belongs to")
     a.add_argument("--quick", action="store_true",
                    help="fast profile: KOSPI top-100, data from 2020-01-02, train 2020+, test 2023-2025, 15 Optuna trials, "
                         "lighter SHAP. Explicit flags still override.")
     q, _ = a.parse_known_args()
+    if q.small_data:
+        a.set_defaults(models=["logit", "lgbm", "catboost"])
     if q.quick:
         a.set_defaults(n_stocks=100, top_n_mcap=100, market="KOSPI", start_date="2020-01-02",
                        train_start=2020, test_start=2023, test_end=2025,
@@ -96,6 +104,9 @@ def main():
         quality_report(raw, firm_cols + MACRO).to_csv(out / "data_quality.csv")
     panel = add_target(raw, args.target_margin, args.target_quantile)
     panel = panel[panel.label_year >= args.train_start]
+    if args.macro_mode == "regime":
+        panel = macro_to_regime(panel, MACRO)
+    regime_src = {v: (f"{v}_RAW" if args.macro_mode == "regime" else v) for v in REGIME_VARS}
     panel = cross_sectional_transform(panel, firm_cols, method=args.scale)
     print(f"panel: {len(panel):,} rows, {panel.ticker.nunique()} tickers, "
           f"label years {panel.label_year.min()}-{panel.label_year.max()}, "
@@ -116,7 +127,8 @@ def main():
         for fset, cols in feature_sets.items():
             for name in args.models:
                 t1 = time.time()
-                bp, bv = tune(name, tr[cols], tr.y, va[cols], va.y, args.trials, args.seed, args.n_jobs)
+                bp, bv = tune(name, tr[cols], tr.y, va[cols], va.y, args.trials, args.seed, args.n_jobs,
+                              small=args.small_data)
                 model = build(name, bp, args.seed, args.n_jobs).fit(trva[cols], trva.y)
                 s = score(model, te[cols])
                 preds.append(te[["date", "ticker", "y", "ret_next", "mkt_next"]].assign(
@@ -127,7 +139,7 @@ def main():
 
                 if fset == "full" and name == args.shap_model:
                     sv, idx, iv = sa.fold_shap(model, te[cols], args.n_inter, args.seed)
-                    shap_parts.append((te[["date"] + cols], sv))
+                    shap_parts.append((te[["date"] + cols + [c for c in regime_src.values() if c not in cols]], sv))
                     inter_parts.append((iv, te[cols].iloc[idx]))
 
     pred = pd.concat(preds, ignore_index=True)
@@ -155,8 +167,11 @@ def main():
         a = ev.monthly_table(pred[(pred.model == name) & (pred.fset == "full")], args.top_q)
         b = ev.monthly_table(pred[(pred.model == name) & (pred.fset == "firm")], args.top_q)
         for metric in ("auc", "prec_k"):
-            h1.append({"model": name, "metric": metric, **ev.paired_tests(a[metric], b[metric])})
+            r = ev.paired_tests(a[metric], b[metric])
+            r.update(ev.mean_diff_bootstrap(a[metric] - b[metric]))
+            h1.append({"model": name, "metric": metric, **r})
     h1 = pd.DataFrame(h1)
+    h1["p_holm"] = ev.holm_adjust(h1["p_ttest"])          # family = every model x metric in this table
     h1.to_csv(out / "h1_macro_vs_firm.csv", index=False)
 
     # ---- H2: tree ensembles vs logistic regression (net monthly returns, full features)
@@ -176,8 +191,9 @@ def main():
         # Regime = macro level above/below the median over the test months. This is an ex-post
         # description of the OOS period (not an input to any model), and it guarantees both regimes
         # are populated even when the test era sits entirely above the training-era median.
-        monthly = X_all.groupby("date")[list(REGIME_VARS)].first()
-        flags = pd.DataFrame({v: X_all["date"].map(sa.regime_flags(monthly[v])).astype(bool) for v in REGIME_VARS})
+        monthly = X_all.groupby("date")[list(regime_src.values())].first()
+        flags = pd.DataFrame({v: X_all["date"].map(sa.regime_flags(monthly[regime_src[v]])).astype(bool)
+                              for v in REGIME_VARS})
         sv_all.to_parquet(out / "shap_values.parquet")
         sa.plot_summary(sv_all, X_all[feature_sets["full"]], out / "shap_summary.png")
         imp = sv_all.abs().mean().sort_values(ascending=False)
@@ -201,12 +217,22 @@ def main():
         top = mat.stack().sort_values(ascending=False).head(8)
         h3_text += "\nTop macro x firm interactions (mean|phi_ij|*2):\n" + fmt(top.to_frame("value")) + "\n"
 
+    # ---- how much can this sample resolve?
+    n_med = pred.groupby("date").size().median()
+    n_mon = pred["date"].nunique()
+    br = pred["y"].mean()
+    se = np.sqrt((n_med + 1) / (12 * n_med * br * n_med * (1 - br))) / np.sqrt(n_mon)
+    power_note = (f"{n_mon} test months x ~{int(n_med)} stocks, positive rate {br:.2f}: the mean monthly AUC of a "
+                  f"model with no skill has s.e. ~{se:.3f}; AUC gaps below ~{2.8 * se:.3f} (80% power) cannot be "
+                  f"told from noise. Treat results as exploratory; read effect sizes and intervals, not p-values.")
     # ---- report
     cols = ["model", "fset", "auc_pooled", "auc_monthly", "pr_auc", "prec_at_k", "base_rate",
             "CAGR", "Sharpe", "MDD", "WinRate_vs_bm", "Turnover"]
     rep = ["# Experiment report", f"data={args.data} trials={args.trials} cost={args.cost} top_q={args.top_q} "
            f"margin={args.target_margin} quantile={args.target_quantile}", "", "## Prediction + backtest (net of costs)", "```",
-           fmt(res[cols].fillna(np.nan)), "```", "", "## H1: full (firm+macro) minus firm-only, paired by month",
+           fmt(res[cols].fillna(np.nan)), "```", "", "## Resolving power", power_note, "",
+           f"settings: small_data={args.small_data} macro_mode={args.macro_mode} factor_set={args.factor_set} "
+           f"market={args.market} top_n_mcap={args.top_n_mcap}", "", "## H1: full (firm+macro) minus firm-only, paired by month",
            "```", fmt(h1, 5), "```", "", "## H2: Sharpe(model) - Sharpe(logit), block bootstrap", "```",
            fmt(h2) if len(h2) else "logit not run", "```", "", "## H3: SHAP", "```", h3_text, "```"]
     (out / "report.md").write_text("\n".join(rep))
