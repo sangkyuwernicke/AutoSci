@@ -17,6 +17,8 @@ consensus.parquet     optional, POINT-IN-TIME analyst consensus (see prepare_con
                       ticker, snapshot_date, target_year, metric ("ni" | "sales"), value (KRW)
                       -> enables FWD_PER, FWD_EPS_GROWTH, FWD_SALES_GROWTH, EST_REVISION_3M
 
+exclusions.csv        optional: ticker, start, end  (administrative issues / investment-caution periods)
+
 Optional fundamentals columns: capex (stand-alone, positive = outflow) -> CAPEX_INTENSITY;
 rd_annual / sales_annual (filled on annual-report rows only) -> RD_INTENSITY, RD_GROWTH.
 Factors whose inputs are missing are simply left out of the returned panel.
@@ -30,6 +32,7 @@ import numpy as np
 import pandas as pd
 
 from config import EXTENDED_FACTORS, MACRO
+from universe import apply_exclusions, coverage_filter
 
 FLOWS = ["sales", "gross_profit", "op_income", "net_income", "cfo", "interest_expense", "depreciation", "capex"]
 STOCKS = ["equity", "assets", "liabilities", "current_assets", "current_liabilities",
@@ -132,7 +135,7 @@ def _forward_factors(panel, cons_path, lag_days=0):
     return p
 
 
-def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0):
+def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.5):
     raw = Path(raw_dir)
     px = pd.read_parquet(raw / "prices.parquet")
     px["date"] = pd.to_datetime(px["date"])
@@ -158,6 +161,11 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0):
               .agg(mcap=("mcap", "last"), market=("market", "last"), eligible=("eligible", "last")))
     panel = long.join(last, how="left").reset_index()
     panel = panel[panel["eligible"].fillna(False).astype(bool)]
+    for name in ("exclusions.parquet", "exclusions.csv"):   # optional: ticker, start, end (admin issues etc.)
+        if (raw / name).exists():
+            ex = pd.read_parquet(raw / name) if name.endswith("parquet") else pd.read_csv(raw / name, dtype={"ticker": str})
+            panel = apply_exclusions(panel, ex)
+            break
     if min_mcap_pct > 0:                                     # liquidity / micro-cap screen, per month
         cut = panel.groupby("date")["mcap"].transform(lambda x: x.quantile(min_mcap_pct / 100))
         panel = panel[panel["mcap"] >= cut]
@@ -214,5 +222,6 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0):
     panel = panel.merge(grid.drop(columns="asof"), on="date", how="left")
 
     panel = panel.dropna(subset=["ret_next", "mkt_next"] + MACRO)
+    panel = coverage_filter(panel, min_coverage)
     feats = [c for c in EXTENDED_FACTORS if c in panel.columns]
     return panel[["date", "ticker"] + feats + MACRO + ["ret_next", "mkt_next"]].reset_index(drop=True)

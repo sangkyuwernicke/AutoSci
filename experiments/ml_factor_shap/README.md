@@ -53,6 +53,23 @@ never stand in for estimates. Vendors sometimes back-fill or restate estimates; 
 R&D is rarely a standard DART line item (`fetch_real_data.py` matches `ifrs-full_ResearchAndDevelopmentExpense`
 and Korean name hints) — check coverage in `data_quality.csv` before interpreting `RD_*`.
 
+## Universe
+
+`fetch_real_data.py prices` builds a **point-in-time** universe: for every month-end, the KOSPI/KOSDAQ
+tickers listed that day (pykrx), so names delisted later stay in. A stock-month is eligible only if it was
+listed then and passed the financial / SPAC screen (`universe.py`: FDR `KRX-DESC` sector where available,
+otherwise name keywords such as 은행·증권·보험·스팩). Further filters in `build_panel` / `run_experiment`:
+
+- `--min-coverage 0.5`: drop stock-months with < 50 % of the 13 statement-based factors (new listings with no
+  filing yet) instead of leaving them at the cross-sectional median.
+- `--min-mcap-pct x`: drop the smallest x % by market cap each month.
+- optional `data/real/exclusions.csv` (`ticker,start,end`): administrative-issue / investment-caution periods,
+  which need a KRX source (none is wired in); rows in the window are removed.
+
+Unverified: the FDR `KRX-DESC` column names and the pykrx calls were written from the documented APIs and not
+run here. Check that financials really disappear (e.g. count tickers containing 은행/증권) before trusting it.
+`tests/test_universe.py` covers the screening logic offline.
+
 ## Design decisions to review
 
 - **Walk-forward** is keyed on the year of the *label* month (t+1). For test year Y: tune on

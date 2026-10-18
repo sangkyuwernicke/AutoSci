@@ -40,6 +40,8 @@ def parse():
     a.add_argument("--factor-set", choices=list(FACTOR_SETS), default="base",
                    help="base = plan's 17 factors; extended adds momentum/R&D/capex/forward-looking factors")
     a.add_argument("--min-mcap-pct", type=float, default=0.0, help="real data: drop the smallest x%% by market cap each month")
+    a.add_argument("--min-coverage", type=float, default=0.5,
+                   help="real data: drop stock-months with < this share of the 13 statement-based factors")
     a.add_argument("--scale", choices=["quantile", "zscore"], default="quantile")
     a.add_argument("--top-q", type=float, default=0.2)
     a.add_argument("--cost", type=float, default=0.002, help="applied to sum|dw| each rebalance")
@@ -54,7 +56,7 @@ def load(args):
         from data_synth import make_synthetic_panel
         return make_synthetic_panel(args.n_stocks, args.seed)
     from data_real import build_panel
-    return build_panel(args.raw_dir, min_mcap_pct=args.min_mcap_pct)
+    return build_panel(args.raw_dir, min_mcap_pct=args.min_mcap_pct, min_coverage=args.min_coverage)
 
 
 def fmt(df, nd=4):
