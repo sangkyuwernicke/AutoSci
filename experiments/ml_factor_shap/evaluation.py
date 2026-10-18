@@ -94,3 +94,18 @@ def sharpe_diff_bootstrap(a, b, n_boot=5000, block=3, seed=0):
     lo, hi = np.percentile(diffs, [2.5, 97.5])
     return dict(sharpe_a=obs[0], sharpe_b=obs[1], diff=obs_diff, ci_lo=lo, ci_hi=hi,
                 p_one_sided=(diffs <= 0).mean(), n_months=n)
+
+
+def mean_diff_bootstrap(d, n_boot=5000, block=3, seed=0):
+    """Circular block bootstrap CI and one-sided p (H0: mean <= 0) for the mean of a monthly difference series."""
+    x = pd.Series(d).dropna().to_numpy()
+    n = len(x)
+    rng = np.random.default_rng(seed)
+    n_blocks = int(np.ceil(n / block))
+    means = np.empty(n_boot)
+    for i in range(n_boot):
+        starts = rng.integers(0, n, n_blocks)
+        idx = ((starts[:, None] + np.arange(block)) % n).reshape(-1)[:n]
+        means[i] = x[idx].mean()
+    lo, hi = np.percentile(means, [2.5, 97.5])
+    return dict(boot_ci_lo=lo, boot_ci_hi=hi, p_boot=(means <= 0).mean())

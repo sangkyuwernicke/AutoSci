@@ -11,6 +11,7 @@ python run_experiment.py --data synthetic --trials 10 --out results/synth
 python fetch_real_data.py prices|macro|fundamentals --out data/real     # UNTESTED, see header
 python run_experiment.py --data real --raw-dir data/real --trials 50 --out results/real
 python tests/test_lookahead.py                                          # filing-date / macro-lag guards
+python compare_runs.py results/base results/ext --labels base extended --out results/base_vs_ext   # paired tests
 python tests/test_forward.py                                            # consensus / R&D / momentum guards
 # extended factor set (adds forward-looking + reinvestment + momentum factors)
 python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6
@@ -24,6 +25,7 @@ python run_experiment.py --data real --raw-dir data/real --factor-set extended -
 | `data_real.py` | raw files → panel; fundamentals joined on **filing date**, macro lagged to end of t‑1 |
 | `fetch_real_data.py` | FinanceDataReader / pykrx / ECOS / Open DART collectors (untested) |
 | `prepare_consensus.py` | validates/normalises a vendor point-in-time consensus export → `consensus.parquet` |
+| `compare_runs.py` | paired comparison of two runs (base vs extended): monthly AUC / Precision@K / net Sharpe, t, Wilcoxon, block bootstrap |
 | `data_quality.py` | per-factor missing / zero / outlier / coverage report (`data_quality.csv`) |
 | `features.py` | target, per-month winsorize (1/99) + rank-gauss or z-score |
 | `models.py` | Logit(L1/L2), Ridge, Tree, RF, XGB, LGBM, CatBoost + Optuna spaces |
