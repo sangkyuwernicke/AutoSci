@@ -50,12 +50,16 @@ def parse():
     a.add_argument("--n-inter", type=int, default=2000, help="rows per fold for SHAP interactions")
     a.add_argument("--top-n-mcap", type=int, default=0,
                    help="real data: keep only the N largest stocks by market cap each month (0 = all)")
+    a.add_argument("--market", choices=["ALL", "KOSPI", "KOSDAQ"], default="ALL",
+                   help="real data: restrict the universe and the benchmark index to one market")
+    a.add_argument("--start-date", default=None, help="drop feature dates before this (YYYY-MM-DD)")
     a.add_argument("--quick", action="store_true",
-                   help="fast profile: 100 stocks, train 2019+, test 2023-2025, 15 Optuna trials, "
+                   help="fast profile: KOSPI top-100, data from 2020-01-02, train 2020+, test 2023-2025, 15 Optuna trials, "
                         "lighter SHAP. Explicit flags still override.")
     q, _ = a.parse_known_args()
     if q.quick:
-        a.set_defaults(n_stocks=100, top_n_mcap=100, train_start=2019, test_start=2023, test_end=2025,
+        a.set_defaults(n_stocks=100, top_n_mcap=100, market="KOSPI", start_date="2020-01-02",
+                       train_start=2020, test_start=2023, test_end=2025,
                        trials=15, n_perm=500, n_inter=1000)
     return a.parse_args()
 
@@ -66,7 +70,8 @@ def load(args):
         return make_synthetic_panel(args.n_stocks, args.seed)
     from data_real import build_panel
     return build_panel(args.raw_dir, min_mcap_pct=args.min_mcap_pct, min_coverage=args.min_coverage,
-                       top_n_mcap=args.top_n_mcap)
+                       top_n_mcap=args.top_n_mcap,
+                       market=None if args.market == "ALL" else args.market)
 
 
 def fmt(df, nd=4):
@@ -79,6 +84,8 @@ def main():
     t0 = time.time()
 
     raw = load(args)
+    if args.start_date:
+        raw = raw[raw["date"] >= pd.Timestamp(args.start_date)]
     firm_cols = [c for c in FACTOR_SETS[args.factor_set] if c in raw.columns]
     missing = [c for c in FACTOR_SETS[args.factor_set] if c not in raw.columns]
     if missing:

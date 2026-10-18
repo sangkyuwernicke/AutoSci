@@ -5,12 +5,13 @@ classification → tree ensembles vs. linear baselines → top-20 % backtest →
 
 ```bash
 pip install -r requirements.txt
-# 0) fast profile (100 stocks, train 2019+, test 2023-2025, 15 trials; explicit flags override)
+# 0) fast profile (KOSPI top-100, from 2020-01-02, train 2020+, test 2023-2025, 15 trials; flags override)
 python run_experiment.py --quick --out results/quick
 # 1) smoke test on synthetic data with a known regime structure (no API keys)
 python run_experiment.py --data synthetic --trials 10 --out results/synth
 # 2) real data
-python fetch_real_data.py prices|macro|fundamentals --out data/real     # UNTESTED, see header
+python prepare_krx.py --krx-dir data/krx --out data/real                # hand-downloaded KRX files
+python fetch_real_data.py macro|fundamentals --out data/real            # UNTESTED, see header
 python run_experiment.py --data real --raw-dir data/real --trials 50 --out results/real
 python tests/test_lookahead.py                                          # filing-date / macro-lag guards
 python compare_runs.py results/base results/ext --labels base extended --out results/base_vs_ext   # paired tests
@@ -98,6 +99,26 @@ run here. Check that financials really disappear (e.g. count tickers containing 
   mean|SHAP interaction| for macro × firm pairs (computed on a random subsample per fold).
 - CatBoost is run on numeric features only, so its categorical-feature strength is unused; add
   sector/market as categoricals in `data_real.py` if you want it.
+
+## KRX data downloaded by hand (no automated KRX access)
+
+KRX Data Marketplace forbids automated collection (the pykrx route got an IP blocked), so the KRX inputs are
+downloaded from the web screens and converted offline:
+
+```
+data/krx/snapshots/*.csv   month-end all-stocks quotes (columns 기준일자,종목코드,종목명,시장구분,종가,...,시가총액,상장주식수)
+data/krx/index_kospi.csv   일자,종가   (index_kosdaq.csv optional)
+python prepare_krx.py --krx-dir data/krx --out data/real      # -> prices_monthly.parquet, index.parquet
+```
+
+Consequences of month-end-only prices: no `VOL_20D` (skipped with a warning), `DIST_52W_HIGH` uses the last 12
+month-end closes, and returns are price returns. Snapshot closes are not split-adjusted: when the share count moves
+> 10 % while market cap stays within [0.75, 1.33], the month's return is the market-cap change instead. This is a
+heuristic (rights issues and mergers can be misread); inspect the "share-count events adjusted" count it prints.
+Preferred shares (code not ending in 0), SPACs and financials (name keywords only, no sector file) are excluded.
+Stocks that vanish from the snapshots have no delisting return, which biases results slightly upward.
+`fundamentals.parquet` and `macro.parquet` still come from `fetch_real_data.py` (DART / ECOS).
+`--quick` now means KOSPI only, top-100 by market cap, data from 2020-01-02, train 2020+, test 2023-2025.
 
 ## Troubleshooting
 
