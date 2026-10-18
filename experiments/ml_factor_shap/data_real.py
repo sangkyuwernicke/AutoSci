@@ -135,13 +135,13 @@ def _forward_factors(panel, cons_path, lag_days=0):
     return p
 
 
-def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.5, top_n_mcap=0):
-    raw = Path(raw_dir)
+def _price_block_daily(raw):
+    """prices.parquet (daily) -> month-end features + month-end market info."""
     px = pd.read_parquet(raw / "prices.parquet")
     px["date"] = pd.to_datetime(px["date"])
     close = px.pivot_table(index="date", columns="ticker", values="close", aggfunc="last").sort_index()
 
-    # ---- price-based block, on a month-end grid (labels = calendar month ends)
+    # month-end grid (labels = calendar month ends)
     m_close = close.resample("ME").last()
     vol20 = close.pct_change(fill_method=None).rolling(20, min_periods=15).std().resample("ME").last()
     dist52 = (close / close.rolling(252, min_periods=200).max() - 1).resample("ME").last()
@@ -159,8 +159,46 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
     last = (px.assign(date=px["date"] + pd.offsets.MonthEnd(0))
               .sort_values("date").groupby(["date", "ticker"])
               .agg(mcap=("mcap", "last"), market=("market", "last"), eligible=("eligible", "last")))
+    return long, last
+
+
+def _price_block_monthly(raw):
+    """prices_monthly.parquet (from prepare_krx.py) -> same outputs. No daily data: VOL_20D is not built and
+    DIST_52W_HIGH uses the last 12 month-end adjusted closes. Windows that cross a gap in a ticker's snapshots
+    (new segment) are masked."""
+    pm = pd.read_parquet(raw / "prices_monthly.parquet")
+    pm["date"] = pd.to_datetime(pm["date"])
+    months = pd.date_range(pm["date"].min(), pm["date"].max(), freq="ME")
+    adj = pm.pivot(index="date", columns="ticker", values="adj_close").reindex(months)
+    seg = pm.pivot(index="date", columns="ticker", values="seg").reindex(months)
+
+    def ok(k):                                               # window of k months stays inside one segment
+        return seg == seg.shift(k)
+
+    def ret(k):
+        return (adj / adj.shift(k) - 1).where(ok(k))
+
+    high12 = adj.rolling(12, min_periods=10).max()
+    long = pd.DataFrame({
+        "RET_1M": ret(1).stack(), "RET_3M": ret(3).stack(), "RET_6M": ret(6).stack(), "RET_12M": ret(12).stack(),
+        "MOM_12_1": (adj.shift(1) / adj.shift(12) - 1).where(ok(12)).stack(),
+        "DIST_52W_HIGH": (adj / high12 - 1).where(ok(11)).stack(),
+        "ret_next": (adj.shift(-1) / adj - 1).where(seg == seg.shift(-1)).stack(),
+    })
+    long.index.names = ["date", "ticker"]
+    last = pm.set_index(["date", "ticker"])[["mcap", "market", "eligible"]]
+    return long, last
+
+
+def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.5, top_n_mcap=0, market=None):
+    """market: "KOSPI" / "KOSDAQ" restricts both the universe and the benchmark index; None keeps both."""
+    raw = Path(raw_dir)
+    long, last = (_price_block_monthly(raw) if (raw / "prices_monthly.parquet").exists()
+                  else _price_block_daily(raw))
+    if market:
+        last = last[last["market"] == market]
     panel = long.join(last, how="left").reset_index()
-    panel = panel[panel["eligible"].fillna(False).astype(bool)]
+    panel = panel[panel["eligible"].eq(True)]
     for name in ("exclusions.parquet", "exclusions.csv"):   # optional: ticker, start, end (admin issues etc.)
         if (raw / name).exists():
             ex = pd.read_parquet(raw / name) if name.endswith("parquet") else pd.read_csv(raw / name, dtype={"ticker": str})
@@ -176,6 +214,8 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
     # ---- benchmark return for t+1
     if (raw / "index.parquet").exists():
         ix = pd.read_parquet(raw / "index.parquet"); ix["date"] = pd.to_datetime(ix["date"])
+        if market:
+            ix = ix[ix["market"] == market]
         ic = ix.pivot_table(index="date", columns="market", values="close", aggfunc="last").resample("ME").last()
         ir = (ic.shift(-1) / ic - 1).stack().rename("mret").reset_index()
         ir.columns = ["date", "market", "mret"]
@@ -183,6 +223,9 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
         b = ir.merge(cap, on=["date", "market"]).dropna()
         bench = b.groupby("date").apply(lambda x: np.average(x.mret, weights=x.cap), include_groups=False)
         panel["mkt_next"] = panel["date"].map(bench)
+        if bench.empty:
+            raise ValueError(f"no benchmark return could be built for market={market!r}; "
+                             "check index.parquet (market names / dates) against the price data")
     else:
         w = panel.dropna(subset=["ret_next", "mcap"])
         bench = w.groupby("date").apply(lambda x: np.average(x.ret_next, weights=x.mcap), include_groups=False)
