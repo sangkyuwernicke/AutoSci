@@ -39,32 +39,52 @@ START, END = "2012-01-01", "2025-12-31"   # 2 years of warm-up for 12M momentum 
 
 
 def fetch_prices(out):
+    """Point-in-time universe + adjusted prices + month-end market cap.
+
+    Universe: for every month-end the KOSPI/KOSDAQ tickers listed that day (pykrx), so names delisted
+    later are included. Sector comes from FDR's KRX-DESC listing for currently listed names; for the
+    rest, financials/SPACs are caught by name keywords (universe.py)."""
     import FinanceDataReader as fdr
     from pykrx import stock
-    listing = fdr.StockListing("KRX")                       # current listing; add delisted names yourself
-    # Survivorship: this universe only holds names alive today. Merge a historical listing
-    # (e.g. KRX data portal / pykrx per-year ticker lists) before drawing conclusions.
-    frames = []
-    for _, r in listing.iterrows():
-        if r["Market"] not in ("KOSPI", "KOSDAQ"):
-            continue
-        d = fdr.DataReader(r["Code"], START, END)[["Close"]].rename(columns={"Close": "close"})
-        d["ticker"], d["market"] = r["Code"], r["Market"]
-        # eligibility: exclude financials / SPAC / administrative issues. FDR's Sector column covers
-        # the first two statically; per-date administrative-issue flags must come from KRX.
-        d["eligible"] = ("스팩" not in str(r["Name"])) and ("금융" not in str(r.get("Dept", "")))
-        frames.append(d.reset_index().rename(columns={"Date": "date"}))
-    px = pd.concat(frames)
-    # historical market cap at each month-end from pykrx
-    caps = []
+    from universe import build_eligibility
+
+    members, caps = [], []
     for d in pd.date_range(START, END, freq="ME"):
         day = stock.get_nearest_business_day_in_a_week(d.strftime("%Y%m%d"))
+        for market in ("KOSPI", "KOSDAQ"):
+            for t in stock.get_market_ticker_list(day, market=market):
+                members.append(dict(month=d, ticker=t, market=market))
         c = stock.get_market_cap_by_ticker(day, market="ALL")[["시가총액"]].rename(columns={"시가총액": "mcap"})
-        c["date"] = pd.Timestamp(day); c["ticker"] = c.index
+        c["month"], c["ticker"] = d, c.index
         caps.append(c.reset_index(drop=True))
-    caps = pd.concat(caps)
+    members, caps = pd.DataFrame(members), pd.concat(caps)
+
+    names = {t: stock.get_market_ticker_name(t) for t in members["ticker"].unique()}
+    desc = fdr.StockListing("KRX-DESC")                      # Sector / Industry for current names (verify columns)
+    sectors = dict(zip(desc.get("Code", []), desc.get("Sector", [])))
+    industries = dict(zip(desc.get("Code", []), desc.get("Industry", [])))
+    members = build_eligibility(members, names, sectors, industries)
+
+    frames = []
+    for t, mk in members.drop_duplicates("ticker")[["ticker", "market"]].itertuples(index=False):
+        try:
+            d = fdr.DataReader(t, START, END)[["Close"]].rename(columns={"Close": "close"})
+        except Exception:
+            d = pd.DataFrame()
+        if d.empty:                                          # delisted names: fall back to pykrx (adjusted)
+            o = stock.get_market_ohlcv_by_date(START.replace("-", ""), END.replace("-", ""), t, adjusted=True)
+            d = o[["종가"]].rename(columns={"종가": "close"})
+        if d.empty:
+            continue
+        d["ticker"] = t
+        frames.append(d.reset_index().rename(columns={d.index.name or "index": "date", "날짜": "date", "Date": "date"}))
+    px = pd.concat(frames)
+    px["date"] = pd.to_datetime(px["date"])
     px["month"] = px["date"] + pd.offsets.MonthEnd(0)
-    caps["month"] = caps["date"] + pd.offsets.MonthEnd(0)
+    # a stock-month is eligible only if it was listed (and passed the financial/SPAC screen) at that month-end
+    px = px.merge(members[["month", "ticker", "market", "eligible"]], on=["month", "ticker"], how="left")
+    px["eligible"] = px["eligible"].fillna(False)
+    px["market"] = px.groupby("ticker")["market"].ffill().bfill()
     px = px.merge(caps[["month", "ticker", "mcap"]], on=["month", "ticker"], how="left")
     px["mcap"] = px.groupby("ticker")["mcap"].ffill()
     px.drop(columns="month").to_parquet(out / "prices.parquet")
