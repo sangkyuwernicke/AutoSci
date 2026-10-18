@@ -11,7 +11,8 @@ python run_experiment.py --quick --out results/quick
 python run_experiment.py --data synthetic --trials 10 --out results/synth
 # 2) real data
 python prepare_krx.py --krx-dir data/krx --out data/real                # hand-downloaded KRX files
-python fetch_real_data.py macro|fundamentals --out data/real            # UNTESTED, see header
+python fetch_real_data.py macro --out data/real --start-year 2019              # ECOS (+ data/krx/vkospi.csv)
+python fetch_real_data.py fundamentals --out data/real --market KOSPI --top-n-mcap 100 --start-year 2019   # DART
 python run_experiment.py --data real --raw-dir data/real --trials 50 --out results/real
 python tests/test_lookahead.py                                          # filing-date / macro-lag guards
 python compare_runs.py results/base results/ext --labels base extended --out results/base_vs_ext   # paired tests
@@ -26,7 +27,8 @@ python run_experiment.py --data real --raw-dir data/real --factor-set extended -
 | `config.py` | factor lists, ECOS codes |
 | `data_synth.py` | synthetic panel (factor payoffs depend on rate / curve regime, value×quality interaction) |
 | `data_real.py` | raw files → panel; fundamentals joined on **filing date**, macro lagged to end of t‑1 |
-| `fetch_real_data.py` | FinanceDataReader / pykrx / ECOS / Open DART collectors (untested) |
+| `prepare_krx.py` | hand-downloaded KRX snapshots / index / VKOSPI csv -> `prices_monthly.parquet`, `index.parquet`, VKOSPI in `macro.parquet` |
+| `fetch_real_data.py` | ECOS macro and Open DART fundamentals collectors (untested against live APIs; resumable, call-limited) |
 | `prepare_consensus.py` | validates/normalises a vendor point-in-time consensus export → `consensus.parquet` |
 | `compare_runs.py` | paired comparison of two runs (base vs extended): monthly AUC / Precision@K / net Sharpe, t, Wilcoxon, block bootstrap |
 | `data_quality.py` | per-factor missing / zero / outlier / coverage report (`data_quality.csv`) |
@@ -60,45 +62,20 @@ and Korean name hints) — check coverage in `data_quality.csv` before interpret
 
 ## Universe
 
-`fetch_real_data.py prices` builds a **point-in-time** universe: for every month-end, the KOSPI/KOSDAQ
-tickers listed that day (pykrx), so names delisted later stay in. A stock-month is eligible only if it was
-listed then and passed the financial / SPAC screen (`universe.py`: FDR `KRX-DESC` sector where available,
-otherwise name keywords such as 은행·증권·보험·스팩). Further filters in `build_panel` / `run_experiment`:
+The universe comes from the hand-downloaded month-end KRX snapshots (see below): every stock listed on that
+month-end, so names delisted later are included (no survivorship filter). A stock-month is eligible if it is common
+stock (code ends in 0), not a SPAC and not a financial (name keywords; add a sector file if you have one). Further
+filters in `build_panel` / `run_experiment`:
 
+- `--market KOSPI|KOSDAQ|ALL`: universe and benchmark index are restricted together.
+- `--top-n-mcap N`: keep the N largest by market cap each month (point in time).
 - `--min-coverage 0.5`: drop stock-months with < 50 % of the 13 statement-based factors (new listings with no
   filing yet) instead of leaving them at the cross-sectional median.
 - `--min-mcap-pct x`: drop the smallest x % by market cap each month.
 - optional `data/real/exclusions.csv` (`ticker,start,end`): administrative-issue / investment-caution periods,
-  which need a KRX source (none is wired in); rows in the window are removed.
+  which need a KRX KIND download (none is wired in); rows in the window are removed.
 
-Unverified: the FDR `KRX-DESC` column names and the pykrx calls were written from the documented APIs and not
-run here. Check that financials really disappear (e.g. count tickers containing 은행/증권) before trusting it.
 `tests/test_universe.py` covers the screening logic offline.
-
-## Design decisions to review
-
-- **Walk-forward** is keyed on the year of the *label* month (t+1). For test year Y: tune on
-  labels ≤ Y‑2, validate on Y‑1, refit on ≤ Y‑1, predict Y. Fold 1 = train 2014–20 / val 2021 /
-  test 2022, as in the plan; no training label is realised after the first test decision date.
-- **Target** `y = 1[R_i − R_m > margin]`; alternatively `--target-quantile 0.8` labels the top 20 % by monthly excess return (fixed 1:4 every month, independent of market direction; exclusive with margin). The plan's formula was not legible, so `--target-margin`
-  defaults to 0 (≈50/50). The plan quotes a 1:4 class ratio; pick a margin that yields it (e.g. 0.03–0.05).
-- **Value ratios are ranked on their inverse** (E/P, B/P, CF/P, EBITDA/EV) so negative earnings sort
-  to the bottom. Column names stay `PER` etc., so a *positive* SHAP direction for `PER` means *cheap*.
-- **Ridge** is a linear-probability model on the binary label (scored by its prediction).
-- **Costs**: `0.20 % × Σ|Δw|` per rebalance (first month pays for building the book). Sharpe uses
-  rf = 0 and monthly returns × √12. Turnover is one-way (½Σ|Δw|).
-- **H1** compares full vs. firm-only per model on monthly AUC / Precision@K (paired one-sided t and
-  Wilcoxon). Monthly values are autocorrelated, so treat p-values as indicative. Note that macro
-  variables are constant within a month: a *linear* model cannot change its cross-sectional ranking
-  with them (the full and firm-only logit results are identical by construction), only models with
-  interactions can.
-- **H2** is a paired circular-block bootstrap (block = 3 months) of ΔSharpe vs. logistic regression.
-- **H3** regimes = macro above/below the median over the *test* months (ex-post description of the OOS
-  period, not a model input; a train-median split leaves 2022–25 entirely "high rate"). Reported:
-  importance rank correlation, month-level permutation p-value, per-factor direction flips, and
-  mean|SHAP interaction| for macro × firm pairs (computed on a random subsample per fold).
-- CatBoost is run on numeric features only, so its categorical-feature strength is unused; add
-  sector/market as categoricals in `data_real.py` if you want it.
 
 ## KRX data downloaded by hand (no automated KRX access)
 
@@ -122,9 +99,14 @@ Stocks that vanish from the snapshots have no delisting return, which biases res
 
 ## Troubleshooting
 
-- `Error occurred in get_index_ohlcv_by_date: Expecting value ...` followed by `IndexError ... size 0` from
-  `fetch_real_data.py prices`: recent pykrx versions require a KRX login. Put `KRX_ID` and `KRX_PW`
-  (your data.krx.co.kr account) in `.env`; the script now checks this up front and says so.
+- Do not scrape KRX (pykrx, FinanceDataReader's KRX endpoints): the KRX Data Marketplace terms forbid automated
+  collection and the IP gets blocked. Use screen downloads, a data product, or the official KRX Open API.
+- `No module named 'OpenDartReader'`: the package `opendartreader` >= 0.3 is imported as `opendartreader`
+  (the code handles both). `pip install -r requirements.txt` first.
+- DART is called ~28 times per ticker for 2019-2025; `--max-calls` (default 6000) stops runs that would exceed a
+  sane daily quota. Results are cached per ticker in `data/real/dart_cache/`, so reruns only fetch what is missing.
+- VKOSPI: download the VKOSPI daily close from KRX to `data/krx/vkospi.csv` (일자,종가); `fetch_real_data.py macro`
+  or `prepare_krx.py` then adds it to `macro.parquet`.
 
 ## Known gaps
 

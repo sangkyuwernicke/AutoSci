@@ -124,6 +124,30 @@ def load_index(krx_dir):
     return pd.concat(frames, ignore_index=True)
 
 
+def append_vkospi(out, krx_dir):
+    """Add VKOSPI (hand-downloaded `vkospi.csv`: 일자,종가) to macro.parquet; keeps any VKOSPI already there if the
+    file is absent. A daily level is public the same day, so avail_date = date."""
+    f = Path(krx_dir) / "vkospi.csv"
+    m = Path(out) / "macro.parquet"
+    if not m.exists():
+        print("[macro] macro.parquet not found; run fetch_real_data.py macro first (it will pick up vkospi.csv)")
+        return
+    macro = pd.read_parquet(m)
+    if not f.exists():
+        has = (macro["name"] == "VKOSPI").any()
+        print("[macro] VKOSPI present" if has else f"[macro] WARNING no VKOSPI: put the KRX download at {f} "
+              "and rerun this step, otherwise build_panel drops every row")
+        return
+    d = read_csv_any(f)
+    d.columns = [c.strip() for c in d.columns]
+    d = d.rename(columns={"일자": "avail_date", "종가": "value"})[["avail_date", "value"]]
+    d["avail_date"] = pd.to_datetime(d["avail_date"])
+    d["value"] = pd.to_numeric(d["value"].astype(str).str.replace(",", ""), errors="coerce")
+    d = d.dropna().assign(name="VKOSPI")
+    pd.concat([macro[macro["name"] != "VKOSPI"], d], ignore_index=True).to_parquet(m)
+    print(f"[macro] VKOSPI: {len(d)} rows, {d['avail_date'].min():%Y-%m-%d} .. {d['avail_date'].max():%Y-%m-%d}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--krx-dir", default="data/krx")
@@ -133,6 +157,7 @@ def main():
     build_monthly(load_snapshots(Path(a.krx_dir) / "snapshots")).to_parquet(out / "prices_monthly.parquet")
     idx = load_index(a.krx_dir)
     idx.to_parquet(out / "index.parquet")
+    append_vkospi(out, a.krx_dir)
     print(f"[krx] index: {', '.join(sorted(idx['market'].unique()))}, {idx['date'].min():%Y-%m-%d} .. {idx['date'].max():%Y-%m-%d}")
 
 
