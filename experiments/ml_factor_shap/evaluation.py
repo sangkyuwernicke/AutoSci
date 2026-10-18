@@ -109,3 +109,16 @@ def mean_diff_bootstrap(d, n_boot=5000, block=3, seed=0):
         means[i] = x[idx].mean()
     lo, hi = np.percentile(means, [2.5, 97.5])
     return dict(boot_ci_lo=lo, boot_ci_hi=hi, p_boot=(means <= 0).mean())
+
+
+def holm_adjust(p):
+    """Holm step-down adjusted p-values (family-wise error control); NaN stays NaN."""
+    p = pd.Series(p, dtype=float)
+    ok = p.notna()
+    order = p[ok].sort_values().index
+    m = len(order)
+    adj, run = {}, 0.0
+    for rank, i in enumerate(order):
+        run = max(run, min(1.0, (m - rank) * p[i]))
+        adj[i] = run
+    return p.index.map(lambda i: adj.get(i, np.nan)).to_numpy()

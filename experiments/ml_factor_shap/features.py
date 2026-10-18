@@ -55,3 +55,20 @@ def cross_sectional_transform(panel, cols=FIRM_FACTORS, winsor=0.01, method="qua
         raise ValueError(method)
     out[cols] = Z.fillna(0.0).to_numpy()
     return out
+
+
+def macro_to_regime(panel, cols):
+    """Replace each macro level by a coarse regime: 1 if above its *expanding* median up to that month, 0 if
+    below, 0.5 if equal. Uses only the past (the median at month t includes t, which is public at t), so no
+    look-ahead. Three values per variable instead of ~70 distinct levels leaves a tree little room to memorise
+    which month a row belongs to. Raw levels are kept as `<col>_RAW` for describing regimes afterwards."""
+    out = panel.copy()
+    monthly = out.groupby("date")[cols].first().sort_index()
+    reg = pd.DataFrame(0.5, index=monthly.index, columns=cols)
+    for c in cols:
+        med = monthly[c].expanding(min_periods=1).median()
+        reg[c] = np.sign(monthly[c] - med).map({1.0: 1.0, -1.0: 0.0, 0.0: 0.5})
+    for c in cols:
+        out[f"{c}_RAW"] = out[c]
+        out[c] = out["date"].map(reg[c]).to_numpy()
+    return out

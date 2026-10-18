@@ -97,6 +97,26 @@ Stocks that vanish from the snapshots have no delisting return, which biases res
 `fundamentals.parquet` and `macro.parquet` still come from `fetch_real_data.py` (DART / ECOS).
 `--quick` now means KOSPI only, top-100 by market cap, data from 2020-01-02, train 2020+, test 2023-2025.
 
+## Pilot mode: when the period and the universe cannot grow
+
+With ~36 test months x 100 stocks the mean monthly AUC of a no-skill model has a standard error of about 0.01, so
+only AUC gaps of roughly 0.03 or more can be told from noise (`report.md` prints this under "Resolving power").
+Treat such a run as an exploratory pilot and read effect sizes and intervals, not p-values. Tools for it:
+
+| tool | what it does |
+|---|---|
+| `factor_ic.py` | monthly rank IC of every factor vs next-month excess return (mean, Newey-West t, hit rate, per year). `--price-only` uses the whole eligible universe (no DART needed) |
+| `--small-data` | shallow, heavily regularised search space; default models only logit, lgbm, catboost (fewer comparisons) |
+| `--macro-mode regime` | macro levels become 1 / 0 / 0.5 versus their expanding median (no look-ahead) so trees cannot memorise months; raw levels stay in `*_RAW` for describing SHAP regimes |
+| `--target-quantile 0.8` | label = top 20 % by monthly excess return; compare with the margin label (runs with different labels cannot be paired) |
+| H1 table | adds a block-bootstrap CI of the mean difference and Holm-adjusted p-values over all model x metric tests |
+| `pilot_suite.py` | runs factor_ic, A (raw macro), B (regime macro), C (B + quantile label) and the paired A-vs-B comparison |
+
+```bash
+python pilot_suite.py --raw-dir data/real --out-root results/pilot            # --quick profile on real data
+python factor_ic.py --data real --raw-dir data/real --price-only --market KOSPI --start-date 2020-01-02
+```
+
 ## Troubleshooting
 
 - Do not scrape KRX (pykrx, FinanceDataReader's KRX endpoints): the KRX Data Marketplace terms forbid automated

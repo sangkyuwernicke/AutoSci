@@ -190,8 +190,14 @@ def _price_block_monthly(raw):
     return long, last
 
 
-def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.5, top_n_mcap=0, market=None):
-    """market: "KOSPI" / "KOSDAQ" restricts both the universe and the benchmark index; None keeps both."""
+PRICE_FACTORS = ["SIZE", "RET_1M", "RET_3M", "RET_6M", "RET_12M", "MOM_12_1", "DIST_52W_HIGH", "VOL_20D"]
+
+
+def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.5, top_n_mcap=0, market=None,
+                price_only=False):
+    """market: "KOSPI" / "KOSDAQ" restricts both the universe and the benchmark index; None keeps both.
+    price_only: skip fundamentals / macro / consensus (they need DART, ECOS) and return price-based factors plus
+    SIZE = log(market cap) for the whole eligible universe -- used by factor_ic.py to check signals on ~2,500 names."""
     raw = Path(raw_dir)
     long, last = (_price_block_monthly(raw) if (raw / "prices_monthly.parquet").exists()
                   else _price_block_daily(raw))
@@ -230,6 +236,12 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
         w = panel.dropna(subset=["ret_next", "mcap"])
         bench = w.groupby("date").apply(lambda x: np.average(x.ret_next, weights=x.mcap), include_groups=False)
         panel["mkt_next"] = panel["date"].map(bench)
+
+    if price_only:
+        panel["SIZE"] = np.log(panel["mcap"])
+        panel = panel.dropna(subset=["ret_next", "mkt_next"])
+        feats = [c for c in PRICE_FACTORS if c in panel.columns]
+        return panel[["date", "ticker"] + feats + ["ret_next", "mkt_next"]].reset_index(drop=True)
 
     # ---- fundamentals as of filing date
     f = pd.read_parquet(raw / "fundamentals.parquet")
