@@ -170,7 +170,7 @@ def main():
         # description of the OOS period (not an input to any model), and it guarantees both regimes
         # are populated even when the test era sits entirely above the training-era median.
         monthly = X_all.groupby("date")[list(REGIME_VARS)].first()
-        flags = pd.DataFrame({v: X_all[v] > monthly[v].median() for v in REGIME_VARS})
+        flags = pd.DataFrame({v: X_all["date"].map(sa.regime_flags(monthly[v])).astype(bool) for v in REGIME_VARS})
         sv_all.to_parquet(out / "shap_values.parquet")
         sa.plot_summary(sv_all, X_all[feature_sets["full"]], out / "shap_summary.png")
         imp = sv_all.abs().mean().sort_values(ascending=False)

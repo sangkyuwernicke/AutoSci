@@ -36,6 +36,17 @@ def interaction_matrix(iv, all_features, firm_factors):
                         index=MACRO, columns=firm_factors)
 
 
+def regime_flags(monthly, min_months=6):
+    """High/low regime flag per month from a monthly macro series. Policy rates sit at one value for long
+    stretches, so `> median` can leave the high group empty; fall back to `>= median`, then fail loudly."""
+    med = monthly.median()
+    for flag in (monthly > med, monthly >= med):
+        if flag.sum() >= min_months and (~flag).sum() >= min_months:
+            return flag
+    raise ValueError(f"cannot split {monthly.name} into two regimes with >= {min_months} months each "
+                     f"(median {med}, {monthly.nunique()} distinct values)")
+
+
 def regime_analysis(sv, Xf, dates, high, n_perm=2000, seed=0):
     """Compare factor importance/direction between high and low regimes of one macro variable.
 
