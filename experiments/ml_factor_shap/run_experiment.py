@@ -51,11 +51,11 @@ def parse():
     a.add_argument("--top-n-mcap", type=int, default=0,
                    help="real data: keep only the N largest stocks by market cap each month (0 = all)")
     a.add_argument("--quick", action="store_true",
-                   help="~30-minute profile: 250 stocks, train 2019+, test 2023-2025, 15 Optuna trials, "
+                   help="fast profile: 100 stocks, train 2019+, test 2023-2025, 15 Optuna trials, "
                         "lighter SHAP. Explicit flags still override.")
     q, _ = a.parse_known_args()
     if q.quick:
-        a.set_defaults(n_stocks=250, top_n_mcap=250, train_start=2019, test_start=2023, test_end=2025,
+        a.set_defaults(n_stocks=100, top_n_mcap=100, train_start=2019, test_start=2023, test_end=2025,
                        trials=15, n_perm=500, n_inter=1000)
     return a.parse_args()
 
