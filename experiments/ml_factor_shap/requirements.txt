@@ -10,7 +10,5 @@ shap
 matplotlib
 pyarrow
 # real-data collection only (fetch_real_data.py)
-finance-datareader
 opendartreader
-pykrx
 requests
