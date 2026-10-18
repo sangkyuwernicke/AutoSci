@@ -4,7 +4,8 @@ Written against the public APIs but never run (it needs DART/ECOS keys and netwo
 not available when this was authored). Expect to fix column names / series codes on first run, and
 spot-check a few tickers against the DART viewer before trusting any number.
 
-    put DART_KEY=... and ECOS_KEY=... in the repo-root .env (git-ignored) or ~/.env, or export them
+    put DART_KEY=..., ECOS_KEY=..., KRX_ID=..., KRX_PW=... in the repo-root .env (git-ignored) or ~/.env,
+    or export them. KRX_ID/KRX_PW are the data.krx.co.kr login that recent pykrx versions require.
     python fetch_real_data.py prices   --out data/real
     python fetch_real_data.py macro    --out data/real
     python fetch_real_data.py fundamentals --out data/real
@@ -38,12 +39,28 @@ _load_env()
 START, END = "2012-01-01", "2025-12-31"   # 2 years of warm-up for 12M momentum / YoY growth
 
 
+def _require_krx():
+    """Recent pykrx versions need a KRX login (KRX_ID / KRX_PW). Without it KRX answers with HTML and pykrx
+    dies with 'Expecting value: line 1 column 1' and an IndexError, which hides the real cause."""
+    if not (os.environ.get("KRX_ID") and os.environ.get("KRX_PW")):
+        raise SystemExit("KRX_ID / KRX_PW are not set. pykrx now logs in to data.krx.co.kr; put both in .env "
+                         "(a KRX data-portal account is needed) and rerun.")
+    from pykrx import stock
+    try:
+        stock.get_nearest_business_day_in_a_week("20240131")
+    except IndexError:
+        raise SystemExit("pykrx could not reach KRX with the given KRX_ID/KRX_PW (empty response). Check the "
+                         "credentials by logging in at data.krx.co.kr, update pykrx (pip install -U pykrx), "
+                         "then retry.")
+
+
 def fetch_prices(out):
     """Point-in-time universe + adjusted prices + month-end market cap.
 
     Universe: for every month-end the KOSPI/KOSDAQ tickers listed that day (pykrx), so names delisted
     later are included. Sector comes from FDR's KRX-DESC listing for currently listed names; for the
     rest, financials/SPACs are caught by name keywords (universe.py)."""
+    _require_krx()
     import FinanceDataReader as fdr
     from pykrx import stock
     from universe import build_eligibility

@@ -99,6 +99,12 @@ run here. Check that financials really disappear (e.g. count tickers containing 
 - CatBoost is run on numeric features only, so its categorical-feature strength is unused; add
   sector/market as categoricals in `data_real.py` if you want it.
 
+## Troubleshooting
+
+- `Error occurred in get_index_ohlcv_by_date: Expecting value ...` followed by `IndexError ... size 0` from
+  `fetch_real_data.py prices`: recent pykrx versions require a KRX login. Put `KRX_ID` and `KRX_PW`
+  (your data.krx.co.kr account) in `.env`; the script now checks this up front and says so.
+
 ## Known gaps
 
 - The fetchers have never been run; ECOS codes in `config.py`, DART account IDs (`IS_MAP`…) and the
