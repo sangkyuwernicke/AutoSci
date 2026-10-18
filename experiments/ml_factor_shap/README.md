@@ -58,7 +58,7 @@ and Korean name hints) — check coverage in `data_quality.csv` before interpret
 - **Walk-forward** is keyed on the year of the *label* month (t+1). For test year Y: tune on
   labels ≤ Y‑2, validate on Y‑1, refit on ≤ Y‑1, predict Y. Fold 1 = train 2014–20 / val 2021 /
   test 2022, as in the plan; no training label is realised after the first test decision date.
-- **Target** `y = 1[R_i − R_m > margin]`. The plan's formula was not legible, so `--target-margin`
+- **Target** `y = 1[R_i − R_m > margin]`; alternatively `--target-quantile 0.8` labels the top 20 % by monthly excess return (fixed 1:4 every month, independent of market direction; exclusive with margin). The plan's formula was not legible, so `--target-margin`
   defaults to 0 (≈50/50). The plan quotes a 1:4 class ratio; pick a margin that yields it (e.g. 0.03–0.05).
 - **Value ratios are ranked on their inverse** (E/P, B/P, CF/P, EBITDA/EV) so negative earnings sort
   to the bottom. Column names stay `PER` etc., so a *positive* SHAP direction for `PER` means *cheap*.
