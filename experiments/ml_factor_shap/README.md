@@ -5,6 +5,8 @@ classification → tree ensembles vs. linear baselines → top-20 % backtest →
 
 ```bash
 pip install -r requirements.txt
+# 0) ~30-minute profile (250 stocks, train 2019+, test 2023-2025, 15 trials; explicit flags override)
+python run_experiment.py --quick --out results/quick
 # 1) smoke test on synthetic data with a known regime structure (no API keys)
 python run_experiment.py --data synthetic --trials 10 --out results/synth
 # 2) real data

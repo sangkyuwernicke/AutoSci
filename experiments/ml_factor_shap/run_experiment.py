@@ -48,6 +48,15 @@ def parse():
     a.add_argument("--shap-model", default="lgbm", choices=["rf", "xgb", "lgbm", "catboost"])
     a.add_argument("--n-perm", type=int, default=2000)
     a.add_argument("--n-inter", type=int, default=2000, help="rows per fold for SHAP interactions")
+    a.add_argument("--top-n-mcap", type=int, default=0,
+                   help="real data: keep only the N largest stocks by market cap each month (0 = all)")
+    a.add_argument("--quick", action="store_true",
+                   help="~30-minute profile: 250 stocks, train 2019+, test 2023-2025, 15 Optuna trials, "
+                        "lighter SHAP. Explicit flags still override.")
+    q, _ = a.parse_known_args()
+    if q.quick:
+        a.set_defaults(n_stocks=250, top_n_mcap=250, train_start=2019, test_start=2023, test_end=2025,
+                       trials=15, n_perm=500, n_inter=1000)
     return a.parse_args()
 
 
@@ -56,7 +65,8 @@ def load(args):
         from data_synth import make_synthetic_panel
         return make_synthetic_panel(args.n_stocks, args.seed)
     from data_real import build_panel
-    return build_panel(args.raw_dir, min_mcap_pct=args.min_mcap_pct, min_coverage=args.min_coverage)
+    return build_panel(args.raw_dir, min_mcap_pct=args.min_mcap_pct, min_coverage=args.min_coverage,
+                       top_n_mcap=args.top_n_mcap)
 
 
 def fmt(df, nd=4):

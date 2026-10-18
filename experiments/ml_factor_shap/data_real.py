@@ -135,7 +135,7 @@ def _forward_factors(panel, cons_path, lag_days=0):
     return p
 
 
-def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.5):
+def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.5, top_n_mcap=0):
     raw = Path(raw_dir)
     px = pd.read_parquet(raw / "prices.parquet")
     px["date"] = pd.to_datetime(px["date"])
@@ -166,6 +166,9 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
             ex = pd.read_parquet(raw / name) if name.endswith("parquet") else pd.read_csv(raw / name, dtype={"ticker": str})
             panel = apply_exclusions(panel, ex)
             break
+    if top_n_mcap > 0:                                       # keep the N largest names each month (point in time)
+        rank = panel.groupby("date")["mcap"].rank(ascending=False, method="first")
+        panel = panel[rank <= top_n_mcap]
     if min_mcap_pct > 0:                                     # liquidity / micro-cap screen, per month
         cut = panel.groupby("date")["mcap"].transform(lambda x: x.quantile(min_mcap_pct / 100))
         panel = panel[panel["mcap"] >= cut]
