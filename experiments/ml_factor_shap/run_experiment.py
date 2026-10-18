@@ -32,6 +32,9 @@ def parse():
     a.add_argument("--train-start", type=int, default=2014)
     a.add_argument("--test-start", type=int, default=2022)
     a.add_argument("--test-end", type=int, default=2025)
+    a.add_argument("--target-quantile", type=float, default=None,
+                   help="y=1 for the top (1-q) share by monthly excess return, e.g. 0.8 -> top 20%% (1:4); "
+                        "exclusive with --target-margin")
     a.add_argument("--target-margin", type=float, default=0.0,
                    help="y=1 iff R_i - R_m > margin (e.g. 0.03 for a rarer positive class)")
     a.add_argument("--factor-set", choices=list(FACTOR_SETS), default="base",
@@ -72,7 +75,7 @@ def main():
     if args.data == "real":
         from data_quality import quality_report
         quality_report(raw, firm_cols + MACRO).to_csv(out / "data_quality.csv")
-    panel = add_target(raw, args.target_margin)
+    panel = add_target(raw, args.target_margin, args.target_quantile)
     panel = panel[panel.label_year >= args.train_start]
     panel = cross_sectional_transform(panel, firm_cols, method=args.scale)
     print(f"panel: {len(panel):,} rows, {panel.ticker.nunique()} tickers, "
@@ -183,7 +186,7 @@ def main():
     cols = ["model", "fset", "auc_pooled", "auc_monthly", "pr_auc", "prec_at_k", "base_rate",
             "CAGR", "Sharpe", "MDD", "WinRate_vs_bm", "Turnover"]
     rep = ["# Experiment report", f"data={args.data} trials={args.trials} cost={args.cost} top_q={args.top_q} "
-           f"margin={args.target_margin}", "", "## Prediction + backtest (net of costs)", "```",
+           f"margin={args.target_margin} quantile={args.target_quantile}", "", "## Prediction + backtest (net of costs)", "```",
            fmt(res[cols].fillna(np.nan)), "```", "", "## H1: full (firm+macro) minus firm-only, paired by month",
            "```", fmt(h1, 5), "```", "", "## H2: Sharpe(model) - Sharpe(logit), block bootstrap", "```",
            fmt(h2) if len(h2) else "logit not run", "```", "", "## H3: SHAP", "```", h3_text, "```"]
