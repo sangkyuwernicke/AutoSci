@@ -1,6 +1,7 @@
 # Wiki Log
 
 > Append-only chronological log. Entry format: `## [YYYY-MM-DD] action | details`
+## [2026-10-05] ingest | added papers/automate-strategy-finding-llm-quant-investment | updated: concepts/agentic-trading (key_papers), topics/llm-finance (key_papers), ideas/kospi-information-diet-vs-reasoning-scaffold (related-papers), graph/edges.jsonl, index.md
 ## [2026-05-27] init | wiki initialized
 ## [2026-05-27] init | wiki initialized
 ## [2026-05-27] init | wiki initialized
@@ -50,3 +51,9 @@
 ## [2026-08-21] ingest | added papers/tradinggroup-multi-agent-trading-system-self | updated: concepts/llm-multi-agent-financial-trading, concepts/reward-labeled-case-reflection (new), methods/tradinggroup-framework (new), methods/reward-guided-post-training-data-synthesis (new), people/flora-salim (new), topics/agentic-trading, topics/llm-finance, index.md, graph/edges.jsonl, graph/citations.jsonl
 ## [2026-08-21] ingest | added papers/stocksim-dual-mode-order-level-simulator | updated: concepts/order-level-dual-mode-trading-simulation (new), methods/stocksim-framework (new), concepts/llm-multi-agent-financial-trading, topics/agentic-trading, topics/llm-finance, index.md
 ## [2026-08-30] ideate | 1 idea proposed (kospi-information-diet-vs-reasoning-scaffold), 2 filtered out | direction: US LLM trading agents -> KOSPI transfer + ablation; user edge = input-channel adaptation dominates reasoning scaffold
+## [2026-09-01] ingest | updated papers/when-agents-trade-live-multi-market-trading-benchmark-LLM-agents from arxiv 2510.11695 abstract | added related links: llm-ai-planning-hybrid, agent-autonomy-levels, multi-agent-collaboration, human-ai-collaboration, automated-trading-ai, agentic-trading, rag-multi-agent-stock-analysis, trader-cot-r1, leverage-r1-stock-trader, kospi-r1-bilingual-LLM-trader
+## [2026-09-22] ideate | 2 ideas proposed, 3 ideas filtered out | direction: KOSPI ablation — effect of adding a global/foreign-index (NASDAQ) correlation-analysis agent
+## [2026-09-29] exp-pilot-eval | kospi-information-diet-vs-reasoning-scaffold | verdict: pass | pilot_result: infrastructure validated (4 cells clean, 0-6.7% parse-failure, both channels confirmed used) — proceed to /exp-design
+## [2026-10-05] novelty | wrote novelty_score=2 to ideas/short-sale-ban-natural-experiment-does
+## [2026-10-05] novelty | wrote novelty_score=2 to ideas/hype-contamination-debate-conformity-multi-agent
+## [2026-10-05] novelty | wrote novelty_score=2 to ideas/effective-agent-count-concentrated-index-heterogeneous

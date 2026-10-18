@@ -5,6 +5,11 @@ papers:
     title: "AgentVerse: Facilitating Multi-Agent Collaboration and Exploring Emergent Behaviors"
     tags: [multi-agent-systems, llm-agents, collaboration, emergent-behaviors, autonomous-agents]
     importance: 4
+  - slug: automate-strategy-finding-llm-quant-investment
+    title: "Automate Strategy Finding with LLM in Quant Investment"
+    tags: [llm-based-quant-trading, strategy-generation, korean-market, financial-nlm, automated-trading, prompt-engineering]
+    importance: 4
+
   - slug: ai-augmented-organization-design-limitations-collaboration
     title: "AI-augmented Organization Design: Limitations of the Collaboration Model between Domain and AI Experts"
     tags: [ai-augmented-organization, human-ai-collaboration, organizational-design, domain-expert, intermediary-role, case-study]
@@ -214,10 +219,10 @@ concepts:
   - slug: diversity-collapse
     title: "Diversity Collapse"
     tags: [AI outputs, homogeneity, human-AI collaboration, creativity]
-    maturity: active
-  - slug: emergent-agent-behaviors
-    title: "Emergent Agent Behaviors"
-    tags: [multi-agent-systems, llm-agents, emergent-behavior, agent-safety, social-simulation]
+    maturity: emerging
+  - slug: live-multi-market-trading-benchmark
+    title: "Live Multi-Market Trading Benchmark"
+    tags: [benchmark, llm-agents, financial-trading, multi-market, evaluation, live-evaluation]
     maturity: emerging
   - slug: expert-recruitment
     title: "Expert Recruitment"
@@ -270,10 +275,6 @@ concepts:
   - slug: layered-agent-memory
     title: "Layered Agent Memory"
     tags: [llm-agents, multi-agent-systems, memory, agent-architecture]
-    maturity: emerging
-  - slug: live-multi-market-trading-benchmark
-    title: "Live Multi-Market Trading Benchmark"
-    tags: [llm-agents, multi-agent-systems, financial-trading, benchmarking, live-trading]
     maturity: emerging
   - slug: llm-based-multi-agent-systems
     title: "LLM-based Multi-Agent Systems"
