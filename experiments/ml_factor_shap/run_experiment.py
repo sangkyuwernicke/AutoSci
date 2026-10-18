@@ -218,9 +218,10 @@ def main():
         h3_text += "\nTop macro x firm interactions (mean|phi_ij|*2):\n" + fmt(top.to_frame("value")) + "\n"
 
     # ---- how much can this sample resolve?
-    n_med = pred.groupby("date").size().median()
-    n_mon = pred["date"].nunique()
-    br = pred["y"].mean()
+    one = pred[(pred["model"] == pred["model"].iloc[0]) & (pred["fset"] == pred["fset"].iloc[0])]   # one row per stock-month
+    n_med = one.groupby("date").size().median()
+    n_mon = one["date"].nunique()
+    br = one["y"].mean()
     se = np.sqrt((n_med + 1) / (12 * n_med * br * n_med * (1 - br))) / np.sqrt(n_mon)
     power_note = (f"{n_mon} test months x ~{int(n_med)} stocks, positive rate {br:.2f}: the mean monthly AUC of a "
                   f"model with no skill has s.e. ~{se:.3f}; AUC gaps below ~{2.8 * se:.3f} (80% power) cannot be "
