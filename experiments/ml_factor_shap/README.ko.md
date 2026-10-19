@@ -6,6 +6,77 @@
 여부를 분류하고, 트리 앙상블과 선형 기준 모델을 비교한 뒤, 상위 20% 포트폴리오를 백테스트하고, 거시 국면별
 SHAP으로 팩터 중요도를 분석합니다.
 
+```mermaid
+flowchart TD
+  subgraph Inputs
+    KRX[KRX snapshots CSVs]
+    ECOS[ECOS (macro) API]
+    DART[DART (fundamentals) API / cache]
+    VENDOR[Vendor consensus CSV]
+  end
+
+  subgraph Preparation
+    P_PREP_KRX[prepare_krx.py\n-> prices_monthly.parquet, index.parquet, macro.parquet]
+    P_FETCH[fetch_real_data.py\n(macro / fundamentals) -> macro.parquet, fundamentals.parquet, dart_cache/]
+    P_CONS[prepare_consensus.py\n-> consensus.parquet]
+    DATA_SYN[data_synth.py (synthetic panel)]
+    DATA_REAL[data_real.py (raw -> panel)]
+  end
+
+  subgraph Panel_Build
+    UNIV[universe.py\n(universe filters)]
+    BUILD[build_panel / features.py\n(target, winsorize, rank/zscore)]
+  end
+
+  subgraph Run_Experiment
+    RUN[run_experiment.py\n(options: --quick, --data {real|synthetic}, --factor-set, --top-n-mcap, --market, --target-quantile)]
+    MODELS[models.py\n(logit, ridge, tree, RF, XGB, LGBM, CatBoost + Optuna)]
+    EVAL[evaluation.py\n(AUC, PR-AUC, Precision@K, backtest, H1/H2 tests)]
+    SHAP[shap_analysis.py\n(SHAP, permutation tests, macro×firm interactions)]
+    COMPARE[compare_runs.py\n(pairwise run comparison)]
+    PILOT[pilot_suite.py\n(pilot configs, factor_ic, pairwise)]
+    OUTPUT[results/<run>/report.md + csv/png]
+  end
+
+  subgraph Tests
+    TESTS[tests/test_lookahead.py\ntests/test_forward.py\n...]
+  end
+
+  %% Inputs -> Preparation
+  KRX --> P_PREP_KRX
+  ECOS --> P_FETCH
+  DART --> P_FETCH
+  VENDOR --> P_CONS
+
+  %% Preparation -> Panel
+  P_PREP_KRX --> DATA_REAL
+  P_FETCH --> DATA_REAL
+  P_CONS --> DATA_REAL
+  DATA_SYN --> BUILD
+  DATA_REAL --> BUILD
+  UNIV --> BUILD
+
+  %% Build -> Run
+  BUILD --> RUN
+  RUN --> MODELS
+  MODELS --> EVAL
+  EVAL --> SHAP
+  EVAL --> COMPARE
+  RUN --> PILOT
+  EVAL --> OUTPUT
+  SHAP --> OUTPUT
+  COMPARE --> OUTPUT
+
+  %% Tests (independent)
+  TESTS -->|verify filters & logic| UNIV
+  TESTS -->|verify lookahead, fetch, pilot| BUILD
+
+  %% Notes / Options
+  classDef note fill:#f9f,stroke:#333,stroke-width:1px;
+  OPTS([Run options:\n--quick, --data, --factor-set, --top-n-mcap,\n--market, --target-quantile, --max-calls, --min-coverage]):::note
+  OPTS -.-> RUN
+```
+
 ```bash
 pip install -r requirements.txt
 # 0) 합성 데이터 빠른 프로필 (100종목, 2020-01-02부터, 학습 2020년~, 테스트 2023~2025, 트라이얼 15회)
