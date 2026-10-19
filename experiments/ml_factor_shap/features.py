@@ -1,0 +1,74 @@
+"""Target construction and cross-sectional preprocessing (winsorize -> rank-gauss / z-score).
+
+Every transform is applied *within a month*, so it uses no information from other dates.
+"""
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
+
+from config import FIRM_FACTORS, INVERT_BEFORE_RANK
+
+
+def add_target(panel, margin=0.0, quantile=None):
+    """Binary label. Also adds `label_year` (year of month t+1).
+
+    quantile=None : y = 1 if R_i,t+1 - R_m,t+1 > margin.
+    quantile=0.8  : y = 1 for the top (1-quantile) share of stocks by excess return *within each month*
+                    (ceil, ties broken by order), so the positive rate is fixed at ~20% every month.
+    """
+    if quantile is not None and margin != 0.0:
+        raise ValueError("use either margin or quantile, not both")
+    p = panel.dropna(subset=["ret_next", "mkt_next"]).copy()
+    p["excess"] = p["ret_next"] - p["mkt_next"]
+    if quantile is None:
+        p["y"] = (p["excess"] > margin).astype(int)
+    else:
+        if not 0.0 < quantile < 1.0:
+            raise ValueError("quantile must be in (0, 1)")
+        g = p.groupby("date")["excess"]
+        k = np.ceil((1 - quantile) * g.transform("count"))
+        p["y"] = (g.rank(ascending=False, method="first") <= k).astype(int)
+    p["label_year"] = (p["date"] + pd.offsets.MonthEnd(1)).dt.year
+    return p.sort_values(["date", "ticker"]).reset_index(drop=True)
+
+
+def cross_sectional_transform(panel, cols=FIRM_FACTORS, winsor=0.01, method="quantile"):
+    """Winsorize at [winsor, 1-winsor] per date, then Z-score or quantile->normal. NaN -> 0."""
+    out = panel.reset_index(drop=True).copy()
+    X = out[cols].astype(float)
+    for c in set(INVERT_BEFORE_RANK) & set(cols):
+        X[c] = 1.0 / X[c]
+    X = X.replace([np.inf, -np.inf], np.nan)
+
+    d = out["date"]
+    lo = X.groupby(d).quantile(winsor).reindex(d).to_numpy()
+    hi = X.groupby(d).quantile(1 - winsor).reindex(d).to_numpy()
+    X = pd.DataFrame(np.clip(X.to_numpy(), lo, hi), columns=cols)
+
+    g = X.groupby(d)
+    if method == "zscore":
+        Z = (X - g.transform("mean")) / g.transform("std").replace(0, np.nan)
+    elif method == "quantile":
+        u = (g.rank() - 0.5) / g.transform("count")
+        Z = pd.DataFrame(norm.ppf(u.to_numpy()), columns=cols)
+    else:
+        raise ValueError(method)
+    out[cols] = Z.fillna(0.0).to_numpy()
+    return out
+
+
+def macro_to_regime(panel, cols):
+    """Replace each macro level by a coarse regime: 1 if above its *expanding* median up to that month, 0 if
+    below, 0.5 if equal. Uses only the past (the median at month t includes t, which is public at t), so no
+    look-ahead. Three values per variable instead of ~70 distinct levels leaves a tree little room to memorise
+    which month a row belongs to. Raw levels are kept as `<col>_RAW` for describing regimes afterwards."""
+    out = panel.copy()
+    monthly = out.groupby("date")[cols].first().sort_index()
+    reg = pd.DataFrame(0.5, index=monthly.index, columns=cols)
+    for c in cols:
+        med = monthly[c].expanding(min_periods=1).median()
+        reg[c] = np.sign(monthly[c] - med).map({1.0: 1.0, -1.0: 0.0, 0.0: 0.5})
+    for c in cols:
+        out[f"{c}_RAW"] = out[c]
+        out[c] = out["date"].map(reg[c]).to_numpy()
+    return out
