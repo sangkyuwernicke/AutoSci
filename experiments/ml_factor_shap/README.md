@@ -1,3 +1,5 @@
+[한국어 README](README.ko.md)
+
 # ML factor × macro excess-return experiment (KOSPI/KOSDAQ)
 
 Walk-forward pipeline for the research plan: firm factors + macro → next-month excess-return
@@ -5,21 +7,21 @@ classification → tree ensembles vs. linear baselines → top-20 % backtest →
 
 ```bash
 pip install -r requirements.txt
-# 0) fast profile (KOSPI top-100, from 2020-01-02, train 2020+, test 2023-2025, 15 trials; flags override)
+# 0) fast profile on synthetic data (100 stocks, from 2020-01-02, train 2020+, test 2023-2025, 15 trials)
 python run_experiment.py --quick --out results/quick
 # 1) smoke test on synthetic data with a known regime structure (no API keys)
 python run_experiment.py --data synthetic --trials 10 --out results/synth
 # 2) real data
-python prepare_krx.py --krx-dir data/krx --out data/real                # hand-downloaded KRX files
+python prepare_krx.py --krx-dir data/krx --out data/real                       # hand-downloaded KRX files
 python fetch_real_data.py macro --out data/real --start-year 2019              # ECOS (+ data/krx/vkospi.csv)
 python fetch_real_data.py fundamentals --out data/real --market KOSPI --top-n-mcap 100 --start-year 2019   # DART
-python run_experiment.py --data real --raw-dir data/real --trials 50 --out results/real
-python tests/test_lookahead.py                                          # filing-date / macro-lag guards
-python compare_runs.py results/base results/ext --labels base extended --out results/base_vs_ext   # paired tests
-python tests/test_forward.py                                            # consensus / R&D / momentum guards
-# extended factor set (adds forward-looking + reinvestment + momentum factors)
-python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6
-python run_experiment.py --data real --raw-dir data/real --factor-set extended --min-mcap-pct 5 --out results/real_ext
+python run_experiment.py --quick --data real --raw-dir data/real --out results/q_base
+# 3) extended factor set (momentum / reinvestment / forward-looking) and paired comparison
+python run_experiment.py --quick --data real --raw-dir data/real --factor-set extended --out results/q_ext
+python compare_runs.py results/q_base results/q_ext --labels base extended --out results/base_vs_ext
+python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6   # optional, vendor data
+# 4) tests (offline)
+for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py; done
 ```
 
 | file | role |
@@ -29,8 +31,11 @@ python run_experiment.py --data real --raw-dir data/real --factor-set extended -
 | `data_real.py` | raw files → panel; fundamentals joined on **filing date**, macro lagged to end of t‑1 |
 | `prepare_krx.py` | hand-downloaded KRX snapshots / index / VKOSPI csv -> `prices_monthly.parquet`, `index.parquet`, VKOSPI in `macro.parquet` |
 | `fetch_real_data.py` | ECOS macro and Open DART fundamentals collectors (untested against live APIs; resumable, call-limited) |
+| `universe.py` | financial / SPAC / preferred screens, `exclusions.csv`, statement-coverage filter |
 | `prepare_consensus.py` | validates/normalises a vendor point-in-time consensus export → `consensus.parquet` |
 | `compare_runs.py` | paired comparison of two runs (base vs extended): monthly AUC / Precision@K / net Sharpe, t, Wilcoxon, block bootstrap |
+| `factor_ic.py` | single-factor monthly rank IC vs next-month excess return (see Pilot mode) |
+| `pilot_suite.py` | runs factor IC, three pilot configurations and the paired comparison |
 | `data_quality.py` | per-factor missing / zero / outlier / coverage report (`data_quality.csv`) |
 | `features.py` | target, per-month winsorize (1/99) + rank-gauss or z-score |
 | `models.py` | Logit(L1/L2), Ridge, Tree, RF, XGB, LGBM, CatBoost + Optuna spaces |
@@ -117,6 +122,31 @@ python pilot_suite.py --raw-dir data/real --out-root results/pilot            # 
 python factor_ic.py --data real --raw-dir data/real --price-only --market KOSPI --start-date 2020-01-02
 ```
 
+## Design decisions to review
+
+- **Walk-forward** is keyed on the year of the *label* month (t+1). For test year Y: tune on labels <= Y-2,
+  validate on Y-1, refit on <= Y-1, predict Y. Fold 1 = train 2014-20 / val 2021 / test 2022, as in the plan; no
+  training label is realised after the first test decision date.
+- **Target** `y = 1[R_i - R_m > margin]`; with `--target-quantile 0.8` the top 20 % by monthly excess return are
+  positive (fixed 1:4 every month, independent of market direction; exclusive with margin). The plan's formula was
+  not legible, so `--target-margin` defaults to 0 (about 1:1). Use the quantile label for the plan's 1:4 ratio.
+- **Value ratios are ranked on their inverse** (E/P, B/P, CF/P, EBITDA/EV) so negative earnings sort to the
+  bottom. Column names stay `PER` etc., so a *positive* SHAP direction for `PER` means *cheap*.
+- **Ridge** is a linear-probability model on the binary label (scored by its prediction).
+- **Costs**: `0.20 % x sum|dw|` per rebalance (first month pays for building the book). Sharpe uses rf = 0 and
+  monthly returns x sqrt(12). Turnover is one-way (0.5 x sum|dw|).
+- **H1** compares full vs. firm-only per model on monthly AUC / Precision@K (paired one-sided t and Wilcoxon).
+  Monthly values are autocorrelated, so treat p-values as indicative. Macro variables are constant within a
+  month, so a *linear* model cannot change its cross-sectional ranking with them (only the firm-factor
+  coefficients move slightly when it is refit); only models with interactions can use macro information.
+- **H2** is a paired circular-block bootstrap (block = 3 months) of the Sharpe difference vs. logistic regression.
+- **H3** regimes = macro above/below the median over the *test* months (ex-post description of the OOS period, not
+  a model input; a train-median split would leave 2022-25 entirely "high rate"); ties at the median fall back to
+  `>=`. Reported: importance rank correlation, month-level permutation p-value, per-factor direction flips, and
+  mean|SHAP interaction| for macro x firm pairs (computed on a random subsample per fold).
+- CatBoost is run on numeric features only, so its categorical-feature strength is unused; add sector/market as
+  categoricals in `data_real.py` if you want it.
+
 ## Troubleshooting
 
 - Do not scrape KRX (pykrx, FinanceDataReader's KRX endpoints): the KRX Data Marketplace terms forbid automated
@@ -130,9 +160,11 @@ python factor_ic.py --data real --raw-dir data/real --price-only --market KOSPI 
 
 ## Known gaps
 
-- The fetchers have never been run; ECOS codes in `config.py`, DART account IDs (`IS_MAP`…) and the
-  2y-yield proxy (3y KTB) need checking. VKOSPI is not on ECOS and must be supplied separately.
-- Survivorship: the FDR listing only contains currently listed tickers. Add delisted names or the
-  backtest is optimistic.
-- Per-date administrative-issue flags (`eligible`) need a KRX source.
+- The ECOS and DART collectors have never been run against the live APIs; ECOS series codes in `config.py`, DART
+  account IDs (`IS_MAP`...) and the 2y-yield proxy (3y KTB) need checking on the first run.
+- Month-end KRX snapshots only: no daily series (no `VOL_20D`), unadjusted closes patched by a share-count heuristic,
+  and no delisting returns for stocks that disappear.
+- Financials are screened by name keywords (no sector file); administrative-issue / investment-caution periods need
+  a KRX KIND download for `exclusions.csv`.
+- Point-in-time analyst consensus is not freely available; without it the four forward-looking factors are skipped.
 - Synthetic results validate the code path only; they say nothing about the Korean market.
