@@ -93,7 +93,7 @@ python run_experiment.py --quick --data real --raw-dir data/real --factor-set ex
 python compare_runs.py results/q_base results/q_ext --labels base extended --out results/base_vs_ext
 python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6   # 선택, 벤더 데이터 필요
 # 4) 테스트 (오프라인)
-for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py; done
+for t in lookahead forward universe krx fetch pilot agent_eval; do python tests/test_$t.py; done
 ```
 
 | 파일 | 역할 |
@@ -114,6 +114,9 @@ for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py;
 | `evaluation.py` | AUC, PR-AUC, Precision@20%, 백테스트, H1 쌍체 검정, H2 블록 부트스트랩 |
 | `shap_analysis.py` | SHAP, 순열검정을 이용한 국면 비교, 거시×기업 상호작용 |
 | `run_experiment.py` | 전체 오케스트레이션 → `results/<run>/report.md` + csv/png |
+| `run_agents.py` | TradingAgents에 (종목, 월말) 표본의 등급을 요청 -> `predictions.parquet` (LLM 에이전트 절 참조) |
+| `compare_agent.py` | 같은 종목-월에서 에이전트 vs ML 모델 비교, 우연 기준선 포함 |
+| `agent_eval/` | TradingAgents용 시점별 데이터 공급처, 백엔드, 실행기 |
 
 ## 확장 팩터 (`--factor-set extended`)
 
@@ -192,6 +195,65 @@ p값보다 효과 크기와 신뢰구간을 읽으세요. 이를 위한 도구�
 python pilot_suite.py --raw-dir data/real --out-root results/pilot            # 실데이터 --quick 프로필
 python factor_ic.py --data real --raw-dir data/real --price-only --market KOSPI --start-date 2020-01-02
 ```
+
+## LLM 에이전트(TradingAgents)를 추가 "모델"로 사용하기
+
+[TradingAgents](https://github.com/TauricResearch/TradingAgents)(Apache-2.0, LangGraph)는 트레이딩 회사처럼 구성된
+LLM 에이전트 팀(시장·펀더멘털 분석가, 강세/약세 토론, 트레이더, 리스크 팀, 포트폴리오 매니저)이 한 종목의 한 날짜에 대해
+`Buy / Overweight / Hold / Underweight / Sell` 등급(해석 불가 시 `REVIEW`)을 돌려줍니다. 여기서는 이것을 ML 모델과
+**같은 코드로 채점되는 종목 선택 방법 하나**로 추가합니다. 데이터 수집 모듈은 그대로이고, `agent_eval/`이 그 결과를
+TradingAgents가 원래 호출하는 외부 공급처 대신 넣어 줍니다.
+
+```
+data/real/*.parquet --(agent_eval.store: 공시일 / 공표일 / 월말 기준)--> "autosci" 공급처
+     --> TradingAgentsGraph.propagate("005930.KS", "2025-06-30") --> 등급 --> predictions.parquet (점수 = 등급)
+     --> compare_agent.py: 같은 종목-월, run_experiment.py와 같은 지표 + 우연 기준선
+```
+
+| 파일 | 역할 |
+|---|---|
+| `agent_eval/store.py` | `prices_monthly`, `fundamentals`, `macro`에 대한 시점별 조회 (`asof` 이후 데이터는 반환 안 함) |
+| `agent_eval/vendor.py` | TradingAgents 라우터(`VENDOR_METHODS`)에 공급처 `autosci` 등록 (공개 등록 API가 없어 실행 시점에 항목을 삽입) |
+| `agent_eval/backends.py` | `TradingAgentsBackend`(결정마다 새 그래프와 새 메모리), `MockBackend`(오프라인, 무작위 등급) |
+| `agent_eval/jobs.py` | 종목·월 선택, 재시작 가능한 실행(`decisions.jsonl`), 등급 → `predictions.parquet` |
+| `run_agents.py` | CLI: `--dry-run` 계획, `--backend mock`, `--backend tradingagents --confirm-cost` |
+| `compare_agent.py` | 같은 종목-월에서 에이전트 vs ML, LLM 학습 시점 전후 구분, 순열 기반 우연 기준선 |
+
+```bash
+# 별도 가상환경, Python 3.11 이상
+pip install -r requirements-agents.txt            # TradingAgents + pandas/pyarrow
+pip install -r requirements.txt                   # compare_agent.py에만 필요 (scikit-learn, scipy)
+export OPENAI_API_KEY=...                         # 또는 --llm-provider로 지정한 제공자의 키
+COMMON="--raw-dir data/real --market KOSPI --top-n-mcap 100 --start-date 2020-01-02 --n-stocks 20 --test-start 2025 --test-end 2025"
+python run_agents.py $COMMON --dry-run                                         # 결정이 몇 건인가? 비용 없음
+python run_agents.py $COMMON --backend mock --out results/agents/mock          # 배선 점검, LLM 없음
+python run_agents.py $COMMON --backend tradingagents --confirm-cost --max-jobs 2 --out results/agents/run1   # 2건으로 시간 측정
+python run_agents.py $COMMON --backend tradingagents --confirm-cost --out results/agents/run1               # 이어서 실행
+python compare_agent.py --agent results/agents/run1 --ml-run results/q_base --ml-fset firm --llm-cutoff 2025-06
+```
+
+에이전트가 보는 것: 월말 가격, 월 단위 기술 요약, 공시된 최신 재무제표(TTM 비율, 월말 시가총액 기준 PER·PBR), 그 날짜까지
+공개된 거시 5개 시리즈입니다. 뉴스·SNS·내부자 거래 데이터는 이 데이터셋에 **없으므로** 기본적으로 `market`과
+`fundamentals` 분석가만 실행하고, 일별 지표(RSI, MACD 등)는 계산할 수 없어 도구가 그렇게 응답합니다.
+
+결과를 읽을 때의 주의:
+
+- **LLM 룩어헤드.** 테스트 기간을 포함한 데이터로 학습된 모델은 그때 일어난 일을 기억할 수 있고, ML 파이프라인에는 이런
+  누수가 없습니다. `compare_agent.py`에 `--llm-cutoff`(모델 학습 데이터의 끝)를 주고 "after cutoff" 구간만 신뢰하세요.
+  나머지 구간은 실력이 아니라 기억일 수 있습니다. (TradingAgents README는 LLM 출력과 실시간 데이터가 달라 백테스트
+  결과가 재현되지 않을 수 있다고만 경고합니다.)
+- **격리.** TradingAgents는 정산된 과거 결정을 기억 로그에 쌓아 다음 실행에 반영합니다. 여기서는 결정마다 빈 메모리 파일과
+  실행 후 삭제되는 캐시를 사용하므로 미래 결과가 앞선 결정에 흘러들 수 없습니다.
+- **작은 표본.** 20종목 × 12개월은 약 240건이며 각각이 여러 번의 LLM 호출을 거치는 멀티에이전트 실행입니다(더 돌리기 전에
+  2건의 비용을 먼저 재세요). 상위 20% 포트폴리오는 약 4종목입니다. 그래서 `compare_agent.py`는 에이전트 점수를 월별로
+  섞은 순열 기준(`auc_null_p95`)과 비교합니다. 배선 점검 때 아무 정보 없는 평가자가 15종목에서 AUC 0.52를 얻었으니,
+  수 백분 차이는 의미가 없습니다.
+- **동률과 변동.** 등급이 5단계라 동률이 많고, 동률은 시드 고정 무작위 값으로 가릅니다. LLM 출력은 실행마다 달라지며
+  (`--repeats`로 독립 실행을 평균), TradingAgents는 자체 결정을 기본 5거래일 보유(`holding_period_days`)로 채점하므로,
+  여기서 쓰는 월간 라벨은 그 프레임워크가 예측하도록 만들어진 대상이 아닙니다.
+- **다루지 않는 것.** Optuna, SHAP(H3), 거시 유무 비교(H1)는 없습니다. 설명할 학습된 모델이 없기 때문입니다.
+- **검증 범위.** 어댑터는 실제 TradingAgents v0.7.0의 라우터와 그래프 생성에 대해 오프라인으로 검증했지만
+  (`tests/test_agent_eval.py`), 실제 LLM으로는 실행해 보지 못했습니다. 첫 실제 결정에서 수정이 필요할 수 있습니다.
 
 ## 설계상 결정할 사항
 

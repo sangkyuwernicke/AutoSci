@@ -21,7 +21,7 @@ python run_experiment.py --quick --data real --raw-dir data/real --factor-set ex
 python compare_runs.py results/q_base results/q_ext --labels base extended --out results/base_vs_ext
 python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6   # optional, vendor data
 # 4) tests (offline)
-for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py; done
+for t in lookahead forward universe krx fetch pilot agent_eval; do python tests/test_$t.py; done
 ```
 
 | file | role |
@@ -42,6 +42,9 @@ for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py;
 | `evaluation.py` | AUC, PR-AUC, Precision@20 %, backtest, H1 paired tests, H2 block bootstrap |
 | `shap_analysis.py` | SHAP, regime comparison with permutation test, macro×firm interactions |
 | `run_experiment.py` | orchestration → `results/<run>/report.md` + csv/png |
+| `run_agents.py` | ask TradingAgents for ratings on (stock, month-end) samples -> `predictions.parquet` (see LLM agents section) |
+| `compare_agent.py` | agent vs ML models on identical stock-months, with a luck baseline |
+| `agent_eval/` | point-in-time data vendor, backends and job runner for TradingAgents |
 
 ## Extended factors (`--factor-set extended`)
 
@@ -121,6 +124,66 @@ Treat such a run as an exploratory pilot and read effect sizes and intervals, no
 python pilot_suite.py --raw-dir data/real --out-root results/pilot            # --quick profile on real data
 python factor_ic.py --data real --raw-dir data/real --price-only --market KOSPI --start-date 2020-01-02
 ```
+
+## LLM agents (TradingAgents) as an additional "model"
+
+[TradingAgents](https://github.com/TauricResearch/TradingAgents) (Apache-2.0, LangGraph) runs a trading-firm style team of
+LLM agents (market / fundamentals analysts, bull-bear debate, trader, risk team, portfolio manager) and returns a
+rating for one stock on one date: `Buy / Overweight / Hold / Underweight / Sell` (or `REVIEW` when unparseable).
+Here it is used as one more stock-selection method scored with the *same* code as the ML models. The data collection
+modules stay as they are; `agent_eval/` feeds their output to TradingAgents instead of the vendors it normally calls.
+
+```
+data/real/*.parquet --(agent_eval.store: filing-date / avail-date / month-end as-of)--> "autosci" vendor
+     --> TradingAgentsGraph.propagate("005930.KS", "2025-06-30") --> rating --> predictions.parquet (score = rating)
+     --> compare_agent.py: same stock-months, same metrics as run_experiment.py + a luck baseline
+```
+
+| file | role |
+|---|---|
+| `agent_eval/store.py` | point-in-time queries on `prices_monthly`, `fundamentals`, `macro` (nothing after `asof`) |
+| `agent_eval/vendor.py` | registers vendor `autosci` in TradingAgents' router (`VENDOR_METHODS`; no public API exists, so entries are inserted at run time) |
+| `agent_eval/backends.py` | `TradingAgentsBackend` (one fresh graph and memory per decision), `MockBackend` (offline, random ratings) |
+| `agent_eval/jobs.py` | choose stocks and months, resumable run (`decisions.jsonl`), ratings -> `predictions.parquet` |
+| `run_agents.py` | CLI: `--dry-run` plan, `--backend mock`, `--backend tradingagents --confirm-cost` |
+| `compare_agent.py` | agent vs ML on identical stock-months, pre/post LLM-cutoff blocks, permutation luck baseline |
+
+```bash
+# separate venv, Python >= 3.11
+pip install -r requirements-agents.txt            # TradingAgents + pandas/pyarrow
+pip install -r requirements.txt                   # only needed for compare_agent.py (scikit-learn, scipy)
+export OPENAI_API_KEY=...                         # or the key of the provider you pass as --llm-provider
+COMMON="--raw-dir data/real --market KOSPI --top-n-mcap 100 --start-date 2020-01-02 --n-stocks 20 --test-start 2025 --test-end 2025"
+python run_agents.py $COMMON --dry-run                                         # how many decisions? no cost
+python run_agents.py $COMMON --backend mock --out results/agents/mock          # plumbing check, no LLM
+python run_agents.py $COMMON --backend tradingagents --confirm-cost --max-jobs 2 --out results/agents/run1   # time 2 decisions
+python run_agents.py $COMMON --backend tradingagents --confirm-cost --out results/agents/run1               # resumes
+python compare_agent.py --agent results/agents/run1 --ml-run results/q_base --ml-fset firm --llm-cutoff 2025-06
+```
+
+What the agents see: month-end prices, a monthly technical summary, the latest *filed* statements (TTM ratios, PER / PBR
+from the month-end market cap) and the five macro series public by that date. They get **no** news, social or insider
+data (none exists in this dataset), so only the `market` and `fundamentals` analysts run by default; daily indicators
+(RSI, MACD, ...) are unavailable and the tools say so.
+
+Read the results with these caveats:
+
+- **LLM look-ahead.** A model trained on data covering the test months can recall what happened; the ML pipeline has no
+  such leak. Pass `--llm-cutoff` (end of the model's training data) to `compare_agent.py` and trust the "after cutoff"
+  block; the other block may reflect memory, not skill. (TradingAgents' README itself only warns that backtest results
+  are not reproducible because LLM output and live data vary.)
+- **Isolation.** TradingAgents keeps a memory log of settled decisions that feeds later runs. Every decision here gets an
+  empty memory file and cache that is deleted afterwards, so no future outcome can reach an earlier decision.
+- **Small samples.** 20 stocks x 12 months is ~240 decisions (each a full multi-agent run: many LLM calls; measure the
+  cost of two before launching more). The top-20 % portfolio holds ~4 names. `compare_agent.py` therefore compares the
+  agent with a permutation null of its own scores (`auc_null_p95`): an uninformed rater scored 0.52 AUC on 15 stocks
+  in a test of the plumbing, so differences of a few hundredths mean nothing.
+- **Ties and noise.** Five rating levels tie often; ties are broken by a seeded random jitter. LLM output varies run to
+  run (`--repeats` averages independent runs). TradingAgents scores its own decisions over a 5-trading-day
+  holding period by default (`holding_period_days`); the monthly label here is not what it was built to predict.
+- **Not covered.** No Optuna, no SHAP (H3), no macro on/off comparison (H1): there is no trained model to explain.
+- **Not tested here:** the adapter was verified offline against the real TradingAgents v0.7.0 router and graph
+  construction (`tests/test_agent_eval.py`), but not with a live LLM; the first real decision may need adjustments.
 
 ## Design decisions to review
 
