@@ -3,43 +3,53 @@
 # 머신러닝 기반 기업 팩터 × 거시경제 초과수익률 예측 실험 (KOSPI/KOSDAQ)
 
 연구 계획서를 구현한 워크포워드 파이프라인입니다. 기업 팩터와 거시 지표를 결합해 차기월 초과수익 달성
-여부를 분류하고, 트리 앙상블과 선형 기준 모델을 비교한 뒤, 상위 20% 포트폴리오를 백테스트하고, 거시 국면별
-SHAP으로 팩터 중요도를 분석합니다.
+여부를 분류하고, 트리 앙상블과 선형 기준 모델을 비교한 뒤, 상위 20% 포트폴리오를 백테스트하고,
+거시 국면별 SHAP 및 팩터 가중치 시계열로 팩터 중요도를 분석합니다.
+
+> **거시변수 역할 선택**: `--macro-role feature`(기본) 은 거시변수를 팩터와 동일한 위상의 직접 입력으로
+> 사용합니다. `--macro-role gating`은 거시변수를 `RegimeGatedScorer`의 게이팅 네트워크에만 공급하여
+> 팩터별 가중치를 조절하는 조절자(Macro-Conditioned Factor Weighter)로 활용합니다.
 
 ```mermaid
 flowchart TD
   subgraph Inputs
-    KRX[KRX snapshots CSVs]
-    ECOS[ECOS (macro) API]
-    DART[DART (fundamentals) API / cache]
-    VENDOR[Vendor consensus CSV]
+    KRX["KRX snapshots CSVs"]
+    ECOS["ECOS (macro) API"]
+    DART["DART (fundamentals) API / cache"]
+    VENDOR["Vendor consensus CSV"]
   end
 
   subgraph Preparation
-    P_PREP_KRX[prepare_krx.py\n-> prices_monthly.parquet, index.parquet, macro.parquet]
-    P_FETCH[fetch_real_data.py\n(macro / fundamentals) -> macro.parquet, fundamentals.parquet, dart_cache/]
-    P_CONS[prepare_consensus.py\n-> consensus.parquet]
-    DATA_SYN[data_synth.py (synthetic panel)]
-    DATA_REAL[data_real.py (raw -> panel)]
+    P_PREP_KRX["prepare_krx.py\n-> prices_monthly.parquet, index.parquet, macro.parquet"]
+    P_FETCH["fetch_real_data.py\n(macro / fundamentals) -> macro.parquet, fundamentals.parquet, dart_cache/"]
+    P_CONS["prepare_consensus.py\n-> consensus.parquet"]
+    DATA_SYN["data_synth.py (synthetic panel)"]
+    DATA_REAL["data_real.py (raw -> panel)"]
   end
 
   subgraph Panel_Build
-    UNIV[universe.py\n(universe filters)]
-    BUILD[build_panel / features.py\n(target, winsorize, rank/zscore)]
+    UNIV["universe.py\n(universe filters)"]
+    BUILD["build_panel / features.py\n(target, winsorize, rank/zscore)"]
+  end
+
+  subgraph MacroRole["거시변수 역할 선택 --macro-role"]
+    direction LR
+    FEAT["feature 모드\n거시변수 → 직접 입력\n팩터와 동일 위상"]
+    GATE["gating 모드\n거시 m_t → α_k → 팩터 가중치 조절"]
   end
 
   subgraph Run_Experiment
-    RUN[run_experiment.py\n(options: --quick, --data {real|synthetic}, --factor-set, --top-n-mcap, --market, --target-quantile)]
-    MODELS[models.py\n(logit, ridge, tree, RF, XGB, LGBM, CatBoost + Optuna)]
-    EVAL[evaluation.py\n(AUC, PR-AUC, Precision@K, backtest, H1/H2 tests)]
-    SHAP[shap_analysis.py\n(SHAP, permutation tests, macro×firm interactions)]
-    COMPARE[compare_runs.py\n(pairwise run comparison)]
-    PILOT[pilot_suite.py\n(pilot configs, factor_ic, pairwise)]
-    OUTPUT[results/<run>/report.md + csv/png]
+    RUN["run_experiment.py\n(--macro-role, --quick, --data, --factor-set, --top-n-mcap, --market, --target-quantile)"]
+    MODELS["models.py\n(logit, ridge, tree, RF, XGB, LGBM, CatBoost + Optuna\n+ RegimeGatedScorer)"]
+    EVAL["evaluation.py\n(AUC, PR-AUC, Precision@K, backtest, H1/H2 tests)"]
+    SHAP["shap_analysis.py\n(SHAP / 팩터 가중치 시계열 w(m_t) / 국면 중심점)"]
+    COMPARE["compare_runs.py\n(pairwise run comparison)"]
+    PILOT["pilot_suite.py\n(pilot configs, factor_ic, pairwise)"]
+    OUTPUT["results/run/report.md + csv/png"]
   end
 
   subgraph Tests
-    TESTS[tests/test_lookahead.py\ntests/test_forward.py\n...]
+    TESTS["tests/test_lookahead.py\ntests/test_forward.py\n..."]
   end
 
   %% Inputs -> Preparation
@@ -56,8 +66,9 @@ flowchart TD
   DATA_REAL --> BUILD
   UNIV --> BUILD
 
-  %% Build -> Run
-  BUILD --> RUN
+  %% Build -> MacroRole -> Run
+  BUILD --> MacroRole
+  MacroRole --> RUN
   RUN --> MODELS
   MODELS --> EVAL
   EVAL --> SHAP
@@ -73,7 +84,7 @@ flowchart TD
 
   %% Notes / Options
   classDef note fill:#f9f,stroke:#333,stroke-width:1px;
-  OPTS([Run options:\n--quick, --data, --factor-set, --top-n-mcap,\n--market, --target-quantile, --max-calls, --min-coverage]):::note
+  OPTS(["Run options:\n--macro-role, --quick, --data, --factor-set,\n--top-n-mcap, --market, --target-quantile"]):::note
   OPTS -.-> RUN
 ```
 
@@ -83,6 +94,8 @@ pip install -r requirements.txt
 python run_experiment.py --quick --out results/quick
 # 1) 국면 구조를 알고 있는 합성 데이터 스모크 테스트 (API 키 불필요)
 python run_experiment.py --data synthetic --trials 10 --out results/synth
+# 1-1) 거시 국면 게이팅 모델 (거시변수를 팩터 가중치 조절자로 사용)
+python run_experiment.py --data synthetic --macro-role gating --trials 15 --out results/synth_gated
 # 2) 실데이터
 python prepare_krx.py --krx-dir data/krx --out data/real                       # 직접 내려받은 KRX 파일 변환
 python fetch_real_data.py macro --out data/real --start-year 2019              # ECOS (+ data/krx/vkospi.csv)
@@ -93,7 +106,7 @@ python run_experiment.py --quick --data real --raw-dir data/real --factor-set ex
 python compare_runs.py results/q_base results/q_ext --labels base extended --out results/base_vs_ext
 python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6   # 선택, 벤더 데이터 필요
 # 4) 테스트 (오프라인)
-for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py; done
+for t in lookahead forward universe krx fetch pilot macro_gated; do python tests/test_$t.py; done
 ```
 
 | 파일 | 역할 |

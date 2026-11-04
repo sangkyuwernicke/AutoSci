@@ -23,6 +23,9 @@ FACTOR_SETS = {"base": BASE_FACTORS, "extended": EXTENDED_FACTORS}
 FIRM_FACTORS = BASE_FACTORS          # default (the plan's original 17)
 
 MACRO = ["BASE_RATE", "TERM_SPREAD", "CPI_YOY", "KRWUSD", "VKOSPI"]
+# In --macro-role feature : MACRO vars are direct model inputs (same level as firm factors).
+# In --macro-role gating  : MACRO vars feed only the RegimeGatedScorer gating network,
+#                           never entering as direct predictors. See models.RegimeGatedScorer.
 ALL_FEATURES = FIRM_FACTORS + MACRO
 
 # Value ratios are rank-transformed on their inverse (E/P, B/P, ...) so that
@@ -33,6 +36,9 @@ INVERT_BEFORE_RANK = ["PER", "PBR", "PCR", "EV_EBITDA", "FWD_PER"]
 REGIME_VARS = {"BASE_RATE": "rate", "TERM_SPREAD": "spread", "CPI_YOY": "inflation"}
 
 MODELS = ["logit", "ridge", "dtree", "rf", "xgb", "lgbm", "catboost"]
+# MODELS lists standard sklearn-compatible models for --models flag.
+# "macro_gated" (RegimeGatedScorer) is added automatically when --macro-role gating is set;
+# it is NOT included here because it requires separate column-list arguments.
 TREE_MODELS = ["rf", "xgb", "lgbm", "catboost"]
 
 # ECOS statistic codes (BoK). Verify against https://ecos.bok.or.kr before use.
