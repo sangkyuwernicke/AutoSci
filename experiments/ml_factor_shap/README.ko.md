@@ -9,37 +9,37 @@ SHAP으로 팩터 중요도를 분석합니다.
 ```mermaid
 flowchart TD
   subgraph Inputs
-    KRX[KRX snapshots CSVs]
-    ECOS[ECOS (macro) API]
-    DART[DART (fundamentals) API / cache]
-    VENDOR[Vendor consensus CSV]
+    KRX["KRX snapshots CSVs"]
+    ECOS["ECOS (macro) API"]
+    DART["DART (fundamentals) API / cache"]
+    VENDOR["Vendor consensus CSV"]
   end
 
   subgraph Preparation
-    P_PREP_KRX[prepare_krx.py\n-> prices_monthly.parquet, index.parquet, macro.parquet]
-    P_FETCH[fetch_real_data.py\n(macro / fundamentals) -> macro.parquet, fundamentals.parquet, dart_cache/]
-    P_CONS[prepare_consensus.py\n-> consensus.parquet]
-    DATA_SYN[data_synth.py (synthetic panel)]
-    DATA_REAL[data_real.py (raw -> panel)]
+    P_PREP_KRX["prepare_krx.py\n-> prices_monthly.parquet, index.parquet, macro.parquet"]
+    P_FETCH["fetch_real_data.py\n(macro / fundamentals) -> macro.parquet, fundamentals.parquet, dart_cache/"]
+    P_CONS["prepare_consensus.py\n-> consensus.parquet"]
+    DATA_SYN["data_synth.py (synthetic panel)"]
+    DATA_REAL["data_real.py (raw -> panel)"]
   end
 
   subgraph Panel_Build
-    UNIV[universe.py\n(universe filters)]
-    BUILD[build_panel / features.py\n(target, winsorize, rank/zscore)]
+    UNIV["universe.py\n(universe filters)"]
+    BUILD["build_panel / features.py\n(target, winsorize, rank/zscore)"]
   end
 
   subgraph Run_Experiment
-    RUN[run_experiment.py\n(options: --quick, --data {real|synthetic}, --factor-set, --top-n-mcap, --market, --target-quantile)]
-    MODELS[models.py\n(logit, ridge, tree, RF, XGB, LGBM, CatBoost + Optuna)]
-    EVAL[evaluation.py\n(AUC, PR-AUC, Precision@K, backtest, H1/H2 tests)]
-    SHAP[shap_analysis.py\n(SHAP, permutation tests, macro×firm interactions)]
-    COMPARE[compare_runs.py\n(pairwise run comparison)]
-    PILOT[pilot_suite.py\n(pilot configs, factor_ic, pairwise)]
-    OUTPUT[results/<run>/report.md + csv/png]
+    RUN["run_experiment.py\n(options: --quick, --data {real|synthetic}, --factor-set, --top-n-mcap, --market, --target-quantile)"]
+    MODELS["models.py\n(logit, ridge, tree, RF, XGB, LGBM, CatBoost + Optuna)"]
+    EVAL["evaluation.py\n(AUC, PR-AUC, Precision@K, backtest, H1/H2 tests)"]
+    SHAP["shap_analysis.py\n(SHAP, permutation tests, macro×firm interactions)"]
+    COMPARE["compare_runs.py\n(pairwise run comparison)"]
+    PILOT["pilot_suite.py\n(pilot configs, factor_ic, pairwise)"]
+    OUTPUT["results/&lt;run&gt;/report.md + csv/png"]
   end
 
   subgraph Tests
-    TESTS[tests/test_lookahead.py\ntests/test_forward.py\n...]
+    TESTS["tests/test_lookahead.py\ntests/test_forward.py\n..."]
   end
 
   %% Inputs -> Preparation
@@ -73,7 +73,7 @@ flowchart TD
 
   %% Notes / Options
   classDef note fill:#f9f,stroke:#333,stroke-width:1px;
-  OPTS([Run options:\n--quick, --data, --factor-set, --top-n-mcap,\n--market, --target-quantile, --max-calls, --min-coverage]):::note
+  OPTS(["Run options:\n--quick, --data, --factor-set, --top-n-mcap,\n--market, --target-quantile, --max-calls, --min-coverage"]):::note
   OPTS -.-> RUN
 ```
 

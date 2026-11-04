@@ -1,0 +1,122 @@
+# Pilot Spec for: kospi-information-diet-vs-reasoning-scaffold
+pilot_spec:
+  # --- Core context (from idea, simplified 2026-09-28 scope) ---
+  hypothesis: >
+    H1 (primary): on KOSPI, adapting the information diet to the market (D5: Korean-native
+    news + DART disclosures + investor net-flow, combined) contributes more marginal
+    performance than adding the full TradingAgents-style reasoning scaffold (S3: analyst
+    team -> bull/bear debate -> trader -> risk team/manager) on top of the naive
+    US-transfer diet (D1: OHLCV/technical + machine-translated news + earnings). Concretely,
+    D5*S0 (Korea-adapted diet, single agent) should match or beat D1*S3 (naive diet, full
+    scaffold). H2 (free corollary): DeltaScaffold(D5) < DeltaScaffold(D1), i.e. the scaffold's
+    marginal value shrinks once the diet is Korea-adapted. This pilot targets only a cheap,
+    diagnostic slice of the 4-cell design (small universe, short window, 1 seed) to detect
+    obvious implementation failure -- broken JSON parsing, a scaffold that ignores its inputs,
+    a diet channel that crashes the pipeline -- before committing to the full 15-name,
+    2024-2026 walk-forward study.
+  approach_sketch: >
+    Four cells crossing two diet levels (D1 naive-transfer, D5 Korea-adapted) with two
+    scaffold levels (S0 single LLM call, S3 minimal reimplementation of TradingAgents' role
+    structure: 4 parallel analyst agents -> 1 round of bull/bear debate -> trader -> 3-profile
+    risk team + manager, all via prompted roles rather than the published repo, to keep pilot
+    scope controlled). Every cell receives the same underlying market data; only the channel
+    content injected into the prompt(s) and the number/structure of LLM calls per decision
+    differ. A deterministic backtest engine executes the parsed BUY/SELL/HOLD (+ position
+    fraction) decisions against next-day returns, long-only, with a fixed transaction cost.
+
+  # --- What to implement ---
+  implementation:
+    repo: "from-scratch"
+    entry_point: "run_pilot.py"
+    modifications: >
+      New minimal pipeline, not a fork of the public TradingAgents repo -- S3 is reimplemented
+      as a small set of role-prompted LLM calls (analysts -> 1-round bull/bear debate -> trader
+      -> risk team + manager) to bound pilot cost and complexity; the full study should use or
+      closely mirror the actual public repo for S3. D1 and D5 share one data-fetch module and
+      one backtest-execution module so the only varying input between diet conditions is the
+      channel content injected into the prompt, and the only varying structure between scaffold
+      conditions is the agent call graph.
+    files_to_create:
+      - "data_fetch.py: pulls daily OHLCV for the pilot universe via yfinance (D0 layer for both diets); fetches recent DART filings for the pilot names via the OpenDART API (D5's disclosure channel); fetches daily foreign/institutional/retail net-buy series for the pilot names via pykrx (D5's flow channel, 20-day lookback per the idea's simplified spec); caches all to CSV/JSON under experiments/pilot/code/{slug}/data/"
+      - "korean_news_stub.py: a small, manually curated set of real Korean-language headlines (~10-15 per name) for the pilot names covering the pilot window, standing in for a full BigKinds/AI-Hub/Naver bulk pipeline -- this directly pilots the idea's flagged 'Korean-language news data is the critical dependency' risk at minimum viable scale, not the full acquisition pipeline. Machine-translated English equivalents (or English-language wire headlines for the same dates) are also collected for the D1 condition."
+      - "channels.py: builds the D1 (OHLCV/technical + translated-news + earnings) and D5 (D1's OHLCV/technical + Korean-native news stub + DART disclosure summary + investor net-flow feature) context strings per (name, date)"
+      - "agents.py: implements both scaffold levels against a shared channel context -- run_s0(context) does one LLM call returning BUY/SELL/HOLD + position_fraction in strict JSON; run_s3(context) runs 4 parallel analyst-role calls (fundamental/news/technical/macro, each reading only its relevant channel slice), 1 round of bull/bear debate over the analyst reports, 1 trader call, and 1 combined risk-team+manager call producing the final decision. Both paths retry once on JSON parse failure, falling back to HOLD."
+      - "backtest.py: deterministic walk-forward executor -- applies parsed decisions to next-day returns, tracks an equal-weight long-only portfolio equity curve per cell, computes metrics"
+      - "run_pilot.py: entry point -- loops over the 4 cells {D1,D5} x {S0,S3} x {names} x {trading days}, calls agents.py, calls backtest.py, writes results/seed_1.json with per-cell metrics and call/parse-failure counts"
+
+  # --- What to run ---
+  setup:
+    model: "${LLM_MODEL} via ${LLM_BASE_URL} (existing project .env, same backbone used by mcp__llm-review -- no fine-tuning)"
+    dataset: >
+      yfinance daily OHLCV for the pilot universe: 005930.KS (Samsung Electronics),
+      000660.KS (SK Hynix), 069500.KS (KODEX 200 ETF) -- same 3-name pilot universe as the
+      sibling global-linkage-channel-ablation-blanket-index pilot, for cross-pilot
+      comparability within this idea cluster. DART filings for 005930/000660 via OpenDART
+      (KODEX 200 is an ETF and has no DART disclosure history, so its D5 cell only gets the
+      flow channel, not the disclosure channel -- noted as an expected asymmetry, not a bug).
+      Investor net-flow (foreign/institutional/retail daily net buys) via pykrx for all 3
+      names, 20-day rolling lookback. ~15 most recent available trading days as the
+      decision/eval window, preceded by 60 calendar days of warm-up history for the flow
+      lookback and technical indicators.
+    hardware: "cpu / none (no model training -- LLM API calls + pandas/numpy backtest only)"
+    framework: "Python (pandas, numpy, yfinance, pykrx, requests for OpenDART and the OpenAI-compatible LLM_BASE_URL)"
+    batch_size: "n/a (sequential per-name, per-day LLM calls; not a gradient-based training job)"
+    max_steps: >
+      ~15 trading days x 3 names x 2 diets x {1 call for S0, ~7 calls for S3 (4 analysts +
+      1 debate + 1 trader + 1 risk/manager, debate reduced to 1 round for the pilot)} =
+      90 (S0 cells) + 630 (S3 cells) = ~720 LLM calls total, reduced from the full study's
+      ~15-name x ~600-trading-day x 4-cell design (well under 1% of full scope, chosen for
+      pilot cost -- the standard 10-30% step-count rule does not directly apply to this
+      non-training, decision-per-day pipeline).
+    learning_rate: "n/a (no training)"
+    seeds: 1
+    other_hparams: >
+      transaction cost 0.20% per trade (matches the sibling harness's 2026 KRX tax
+      assumption); long-only; equal-weight target allocation across the 3-name pilot
+      universe; JSON parse-failure fallback = HOLD; S3 debate rounds fixed to 1 (reduced
+      from the full study's un-fixed 1-3 round range, per pilot cost constraints).
+
+  # --- What to measure ---
+  metrics:
+    - name: "cumulative return per cell (D1*S0, D1*S3, D5*S0, D5*S3)"
+      why: "primary diagnostic -- does any cell collapse catastrophically relative to the others; also the raw input to the pilot-scale DeltaData/DeltaScaffold reads"
+    - name: "annualized Sharpe ratio per cell (computed from the ~15-day daily return series, noisy but standard for a short diagnostic window)"
+      why: "risk-adjusted signal, matches the sibling harness's primary metric so results are comparable in kind (not magnitude) across this idea cluster's pilots"
+    - name: "JSON parse-failure / fallback-to-HOLD rate, separately for S0 vs S3 calls"
+      why: "detects whether the multi-call S3 pipeline (7x more LLM calls per decision than S0) breaks output formatting more often than S0 -- a pure implementation-failure signal, not a research finding, and specifically checks that scaffold complexity itself isn't the thing generating spurious differences"
+    - name: "qualitative trace check: does S3's trader decision actually change when the debate/risk-team stage is given contradictory analyst reports, and does D5's decision visibly reference the DART/flow channel content in its stated rationale (manual inspection of ~5 sampled decision logs per cell)"
+      why: "cheap sanity check that each scaffold/diet condition is actually using its distinguishing input, not silently ignoring it -- a null H1 result is only informative if both conditions demonstrably used their inputs"
+
+  # --- What to compare against ---
+  baseline:
+    method: "D1*S0 (naive-transfer diet, single agent) -- the cheapest, most 'un-adapted' cell"
+    source: "wiki/ideas/kospi-information-diet-vs-reasoning-scaffold.md Approach sketch (simplified 2026-09-28 scope, 4-cell design)"
+    expected_value: "no prior empirical run exists yet for this idea (this is the first pilot) -- the pilot's own D1*S0 cell serves as the internal reference point for the other 3 cells, not an external published number"
+
+  # --- What counts as success ---
+  success_criterion:
+    pass: >
+      All 4 cells complete without crashing; JSON parse-failure/fallback rate stays below 10%
+      in every cell, including S3's higher-call-count cells; the qualitative trace check
+      confirms S3's decisions visibly respond to debate/risk-team content and D5's decisions
+      visibly reference DART/flow content in at least half of the sampled logs; no cell is
+      degenerate (e.g. always HOLD regardless of input). Directional plausibility of D5 cells
+      around any DART filing or large net-flow day present in the ~15-day window is a bonus
+      signal, not required for pass.
+    fail: >
+      Any cell crashes or has a JSON parse-failure/fallback rate above 30%; the qualitative
+      trace check shows S3's later stages (debate/risk-team) never change the outcome regardless
+      of analyst input (i.e. the scaffold is structurally inert), or D5's decisions never
+      reference the DART/flow content even when clearly relevant (i.e. the diet channels are
+      being ignored) -- either failure mode would invalidate the planned comparison before any
+      performance numbers are worth trusting; D5*S0's performance is catastrophically worse than
+      D1*S0's in a way not explainable by the tiny sample size alone.
+    inconclusive: >
+      Everything runs cleanly, no cell is degenerate, and both diet and scaffold channels are
+      demonstrably used -- but the ~15-day/3-name sample is too small/noisy to say anything about
+      relative cell performance (expected and acceptable for this diagnostic pilot).
+      /exp-pilot-eval should record this as "infrastructure validated, proceed to full study"
+      rather than a negative result. If only the Korean-news-stub or DART/pykrx data sources are
+      unavailable (per the idea's flagged data-dependency risk) while everything else runs, record
+      as inconclusive-with-a-named-blocker rather than fail, and flag the specific missing source
+      for resolution before the full study.
