@@ -62,8 +62,6 @@ wiki/topics/*
 !wiki/topics/.gitkeep
 wiki/people/*
 !wiki/people/.gitkeep
-wiki/ideas/*
-!wiki/ideas/.gitkeep
 wiki/experiments/*
 !wiki/experiments/.gitkeep
 wiki/methods/*
