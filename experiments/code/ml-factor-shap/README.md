@@ -21,7 +21,7 @@ python run_experiment.py --quick --data real --raw-dir data/real --factor-set ex
 python compare_runs.py results/q_base results/q_ext --labels base extended --out results/base_vs_ext
 python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6   # optional, vendor data
 # 4) tests (offline)
-for t in lookahead forward universe krx fetch pilot agent_eval; do python tests/test_$t.py; done
+for t in lookahead forward universe krx fetch pilot macro_gated agent_eval; do python tests/test_$t.py; done
 ```
 
 | file | role |
