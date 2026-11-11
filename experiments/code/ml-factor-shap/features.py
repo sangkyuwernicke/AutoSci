@@ -9,18 +9,24 @@ from scipy.stats import norm
 from config import FIRM_FACTORS, INVERT_BEFORE_RANK
 
 
-def add_target(panel, margin=0.0, quantile=None):
+def add_target(panel, margin=0.0, quantile=None, direction=False):
     """Binary label. Also adds `label_year` (year of month t+1).
+
+    direction=True: y = 1 if the stock's own next-month return is positive (absolute up/down). The label does
+                    not depend on the other stocks, so the target stays stable across months; stocks are then
+                    ranked by predicted P(up) and the top 20 % are held. Use this as the primary label.
 
     quantile=None : y = 1 if R_i,t+1 - R_m,t+1 > margin.
     quantile=0.8  : y = 1 for the top (1-quantile) share of stocks by excess return *within each month*
                     (ceil, ties broken by order), so the positive rate is fixed at ~20% every month.
     """
-    if quantile is not None and margin != 0.0:
-        raise ValueError("use either margin or quantile, not both")
+    if sum([quantile is not None, margin != 0.0, direction]) > 1:
+        raise ValueError("use only one of direction, margin, quantile")
     p = panel.dropna(subset=["ret_next", "mkt_next"]).copy()
     p["excess"] = p["ret_next"] - p["mkt_next"]
-    if quantile is None:
+    if direction:
+        p["y"] = (p["ret_next"] > 0).astype(int)
+    elif quantile is None:
         p["y"] = (p["excess"] > margin).astype(int)
     else:
         if not 0.0 < quantile < 1.0:
@@ -32,8 +38,23 @@ def add_target(panel, margin=0.0, quantile=None):
     return p.sort_values(["date", "ticker"]).reset_index(drop=True)
 
 
+def impute_ffill(panel, cols, max_missing=0.3):
+    """Time-series imputation, no look-ahead: forward-fill each ticker's last observed value (the latest earlier
+    filing / price window) and never back-fill. Factors still missing in more than `max_missing` of rows are dropped.
+    Returns (panel, kept_cols, report) where report lists missing shares before / after the fill."""
+    p = panel.sort_values(["ticker", "date"]).copy()
+    before = p[cols].replace([np.inf, -np.inf], np.nan).isna().mean()
+    p[cols] = p.groupby("ticker")[cols].ffill()
+    after = p[cols].replace([np.inf, -np.inf], np.nan).isna().mean()
+    kept = [c for c in cols if after[c] <= max_missing]
+    rep = pd.DataFrame({"missing_before": before, "missing_after_ffill": after, "kept": after <= max_missing})
+    return p.sort_values(["date", "ticker"]).reset_index(drop=True), kept, rep
+
+
 def cross_sectional_transform(panel, cols=FIRM_FACTORS, winsor=0.01, method="quantile"):
-    """Winsorize at [winsor, 1-winsor] per date, then Z-score or quantile->normal. NaN -> 0."""
+    """Winsorize at [winsor, 1-winsor] per date, then Z-score or quantile->normal.
+    Residual NaN (after impute_ffill) -> 0, which is the cross-sectional median of the transformed factor,
+    i.e. a median imputation; the share is small and reported by run_experiment."""
     out = panel.reset_index(drop=True).copy()
     X = out[cols].astype(float)
     for c in set(INVERT_BEFORE_RANK) & set(cols):

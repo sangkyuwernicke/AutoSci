@@ -254,16 +254,28 @@ def score(model, X):
     return model.predict_proba(X)[:, 1] if hasattr(model, "predict_proba") else model.predict(X)
 
 
+def monthly_auc(y, s, groups):
+    """Mean of the per-group (per decision month) AUC: only the cross-sectional ordering counts. A model that gives a
+    whole month one score (e.g. driven by macro level alone) gets 0.5 for that month instead of being rewarded for
+    guessing the month's market direction, which is what the pooled AUC over all validation months does."""
+    df = pd.DataFrame({"y": np.asarray(y), "s": np.asarray(s), "g": np.asarray(groups)})
+    aucs = [roc_auc_score(x.y, x.s) for _, x in df.groupby("g") if x.y.nunique() == 2]
+    return float(np.mean(aucs))
+
+
 def tune(name, Xtr, ytr, Xva, yva, n_trials, seed=0, n_jobs=-1, small=False,
-         firm_cols=None, macro_cols=None):
+         firm_cols=None, macro_cols=None, groups_va=None):
     """Maximise validation AUC with TPE. Returns (best_params, best_val_auc).
 
     firm_cols / macro_cols are forwarded to build() for name == "macro_gated".
+    groups_va: decision month of each validation row; when given the objective is the mean monthly AUC (matches the
+    cross-sectional top-K portfolio), otherwise the AUC pooled over all validation rows.
     """
     def objective(trial):
         m = build(name, suggest(name, trial, small), seed, n_jobs,
                   firm_cols, macro_cols).fit(Xtr, ytr)
-        return roc_auc_score(yva, score(m, Xva))
+        s = score(m, Xva)
+        return roc_auc_score(yva, s) if groups_va is None else monthly_auc(yva, s, groups_va)
 
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(seed=seed))
     study.optimize(objective, n_trials=n_trials)
