@@ -1,0 +1,37 @@
+{
+  "seed": 1,
+  "sanity_mode": true,
+  "decision_window_days": 2,
+  "start_date": "2026-09-23",
+  "end_date": "2026-09-28",
+  "elapsed_seconds": 45.32804298400879,
+  "results": {
+    "D1_S0": {
+      "cumulative_return": -0.00644887299792718,
+      "annualized_sharpe": -3.141095478363197,
+      "max_drawdown": -0.014477524810274431,
+      "parse_failure_rate": 0.0,
+      "n_decisions": 6,
+      "n_llm_calls": 6,
+      "sample_traces": [
+        "[samsung 2026-09-23] S0 single-call: parse_ok=True | FINAL: BUY frac=0.80 — Strong fundamentals and positive news outlook",
+        "[samsung 2026-09-28] S0 single-call: parse_ok=True | FINAL: BUY frac=0.80 — Strong fundamentals and positive news support growth potential.",
+        "[sk_hynix 2026-09-23] S0 single-call: parse_ok=True | FINAL: HOLD frac=0.80 — Mixed signals with positive SMA trend but elevated RSI",
+        "[sk_hynix 2026-09-28] S0 single-call: parse_ok=True | FINAL: HOLD frac=0.50 — RSI near neutral and pending legal uncertainty warrants caution",
+        "[kodex200 2026-09-23] S0 single-call: parse_ok=True | FINAL: HOLD frac=0.70 — RSI nearing overbought but no clear reversal signals"
+      ]
+    }
+  },
+  "benchmark": {
+    "method": "buy_and_hold_equal_weight",
+    "cumulative_return": -0.027908318905927598,
+    "annualized_sharpe": -4.726095215932449,
+    "note": "zero-LLM-call reference: equal-weight, no trading, no transaction cost, same window/universe as the pilot cells"
+  },
+  "derived": {
+    "delta_data_at_s0": NaN,
+    "delta_scaffold_at_d1": NaN,
+    "delta_scaffold_at_d5": NaN,
+    "note": "cumulative-return deltas at pilot scale (1 seed, tiny sample) — diagnostic only, not statistically powered"
+  }
+}

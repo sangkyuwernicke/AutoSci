@@ -62,8 +62,6 @@ wiki/topics/*
 !wiki/topics/.gitkeep
 wiki/people/*
 !wiki/people/.gitkeep
-wiki/ideas/*
-!wiki/ideas/.gitkeep
 wiki/experiments/*
 !wiki/experiments/.gitkeep
 wiki/methods/*
@@ -93,7 +91,11 @@ wiki/graph/*
 wiki/.checkpoints/
 
 # /exp-run generated experiment code
-experiments/code/
+# experiments/code/
+# Track experiment code and results; ignore raw data and failed clones (nested .git).
+experiments/code/*/data/
+experiments/code/*/results/**/*.parquet
+experiments/code/*/_failed_clone_*/
 
 # /visualize generated artifacts (regenerated from config/visualize.json
 # + wiki/graph/ at /init Step 6 or direct /visualize)
@@ -112,4 +114,6 @@ wiki/graph-view.html
 **/未命名*.canvas
 
 data/
+# 임시
+.agents
 
