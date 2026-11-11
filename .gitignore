@@ -93,7 +93,11 @@ wiki/graph/*
 wiki/.checkpoints/
 
 # /exp-run generated experiment code
-experiments/code/
+# experiments/code/
+# Track experiment code and results; ignore raw data and failed clones (nested .git).
+experiments/code/*/data/
+experiments/code/*/results/**/*.parquet
+experiments/code/*/_failed_clone_*/
 
 # /visualize generated artifacts (regenerated from config/visualize.json
 # + wiki/graph/ at /init Step 6 or direct /visualize)
@@ -110,3 +114,7 @@ wiki/graph-view.html
 # Obsidian "untitled canvas" debris (locale-aware: en + zh)
 **/Untitled*.canvas
 **/未命名*.canvas
+
+# 임시
+.agents
+
