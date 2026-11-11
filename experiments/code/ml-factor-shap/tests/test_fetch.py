@@ -36,6 +36,8 @@ class FakeDart:
 
 
 fr.START, fr.END = "2020-01-01", "2020-12-31"
+_real_finstate = fr._finstate
+fr._finstate = lambda dart, t, y, c, fs_div="CFS": dart.finstate_all(t, y, reprt_code=c)   # fake client path
 dart = FakeDart()
 q = fr._fetch_one(dart, "000010", [2019, 2020]).set_index("period_end")
 assert dart.calls == 8
@@ -67,4 +69,119 @@ with tempfile.TemporaryDirectory() as d:
         raise AssertionError("call limit not enforced")
     except SystemExit:
         pass
+
+# ---- _finstate status handling (requests.get mocked): gaps are not errors, quota/outages never look like gaps
+class _Resp:
+    def __init__(self, jo): self._jo = jo
+    def raise_for_status(self): pass
+    def json(self): return self._jo
+
+
+class _Corp:
+    def find_corp_code(self, t): return None if t == "NOCORP" else "00126380"
+
+
+def _with_responses(seq, fn):
+    it = iter(seq)
+    orig_get, orig_sleep = fr.requests.get, fr.time.sleep
+    fr.requests.get = lambda *a, **k: _Resp(next(it))
+    fr.time.sleep = lambda *_: None
+    fr._Budget.min_interval, fr._Budget.used, fr._Budget.limit = 0.0, 0, None
+    try:
+        return fn()
+    finally:
+        fr.requests.get, fr.time.sleep = orig_get, orig_sleep
+
+
+import os
+os.environ.setdefault("DART_KEY", "x")
+ok = {"status": "000", "list": [{"account_id": "a", "rcept_no": "20200515000001"}]}
+assert len(_with_responses([ok], lambda: _real_finstate(_Corp(), "000010", 2020, "11013"))) == 1
+assert _with_responses([{"status": "013", "message": "no data"}],
+                       lambda: _real_finstate(_Corp(), "000010", 2020, "11013")) is None        # real gap
+assert _real_finstate(_Corp(), "NOCORP", 2020, "11013") is None                                 # no corp code
+assert len(_with_responses([{"status": "800", "message": "maintenance"}, ok],
+                           lambda: _real_finstate(_Corp(), "000010", 2020, "11013"))) == 1      # retried
+for bad in ({"status": "020", "message": "limit"}, {"status": "100", "message": "bad param"}):
+    try:
+        _with_responses([bad], lambda: _real_finstate(_Corp(), "000010", 2020, "11013"))
+        raise AssertionError(f"status {bad['status']} was not raised")
+    except fr.DartStop:
+        pass
+try:                                                                                              # budget
+    fr._Budget.limit, fr._Budget.used = 1, 1
+    fr._Budget.tick()
+    raise AssertionError("budget not enforced")
+except fr.DartStop:
+    pass
+
+# ---- quota hit mid-run: nothing empty is cached, fundamentals.parquet untouched, rerun resumes
+with tempfile.TemporaryDirectory() as d:
+    out = Path(d)
+    class QuotaDart(FakeDart):
+        def finstate_all(self, t, year, reprt_code="11011", fs_div="CFS"):
+            if t == "000020" and year == 2020 and reprt_code == "11014":
+                raise fr.DartStop("quota")
+            return super().finstate_all(t, year, reprt_code, fs_div)
+    qd = QuotaDart()
+    fr._dart_client = lambda: qd
+    try:
+        fr.fetch_fundamentals(out, ["000010", "000020"], start_year=2020, max_calls=100)
+        raise AssertionError("DartStop did not stop the run")
+    except SystemExit as e:
+        assert e.code == 2
+    assert (out / "dart_cache" / "000010.parquet").exists()
+    assert not (out / "dart_cache" / "000020.parquet").exists(), "interrupted ticker must not be cached"
+    assert not (out / "fundamentals.parquet").exists()
+    fr._dart_client = lambda: FakeDart()
+    fr.fetch_fundamentals(out, ["000010", "000020"], start_year=2020, max_calls=100)
+    assert len(pd.read_parquet(out / "fundamentals.parquet")) == 8
+
+# ---- pre-2019 filings use `ifrs_X` account ids: they must map like `ifrs-full_X`
+old_fmt = {"status": "000", "list": [{"account_id": "ifrs_Equity", "rcept_no": "20170331000001"},
+                                     {"account_id": "dart_OperatingIncomeLoss", "rcept_no": "20170331000001"}]}
+got = _with_responses([old_fmt], lambda: _real_finstate(_Corp(), "000010", 2016, "11011"))
+assert list(got["account_id"]) == ["ifrs-full_Equity", "dart_OperatingIncomeLoss"]
+
+# ---- repair mode: early years refetched into a new cache, later years kept from the base cache
+with tempfile.TemporaryDirectory() as d:
+    out = Path(d)
+    base = out / "dart_cache"; base.mkdir()
+    pd.DataFrame(dict(ticker="000010", period_end=pd.to_datetime(["2019-12-31", "2020-12-31"]),
+                      sales=[1.0, 2.0], rd_annual=[None, None])).to_parquet(base / "000010.parquet")
+    class EarlyDart(FakeDart):
+        def finstate_all(self, t, year, reprt_code="11011", fs_div="CFS"):
+            return None
+    fr._dart_client = lambda: EarlyDart()
+    fr.END = "2019-12-31"
+    pd.DataFrame(dict(ticker="000010", period_end=pd.to_datetime(["2019-12-31"]), sales=[9.0])
+                 ).to_parquet(out / "dart_cache_early_seed.parquet")
+    (out / "dart_cache_early").mkdir()
+    pd.DataFrame(dict(ticker="000010", period_end=pd.to_datetime(["2018-12-31"]), sales=[5.0], rd_annual=[None])
+                 ).to_parquet(out / "dart_cache_early" / "000010.parquet")
+    fr.fetch_fundamentals(out, ["000010"], start_year=2018, max_calls=100, cache_name="dart_cache_early",
+                          base_cache="dart_cache", base_from_year=2020)
+    f = pd.read_parquet(out / "fundamentals.parquet").sort_values("period_end")
+    assert list(f["period_end"].dt.year) == [2018, 2020] and list(f["sales"]) == [5.0, 2.0]
+    pd.DataFrame().to_parquet(base / "000020.parquet")                           # ticker without filings: empty frame
+    pd.DataFrame(dict(ticker="000020", period_end=pd.to_datetime(["2018-12-31"]), sales=[7.0], rd_annual=[None])
+                 ).to_parquet(out / "dart_cache_early" / "000020.parquet")
+    fr.fetch_fundamentals(out, ["000010", "000020"], start_year=2018, max_calls=100, cache_name="dart_cache_early",
+                          base_cache="dart_cache", base_from_year=2020)
+    assert len(pd.read_parquet(out / "fundamentals.parquet")) == 3
+
+# ---- extend a finished table to a new year: earlier rows come from the table, the new year from a fresh cache
+with tempfile.TemporaryDirectory() as d:
+    out = Path(d)
+    pd.DataFrame(dict(ticker=["000010", "000010"], period_end=pd.to_datetime(["2024-12-31", "2025-12-31"]),
+                      sales=[1.0, 2.0])).to_parquet(out / "fundamentals.parquet")
+    (out / "cache26").mkdir()
+    pd.DataFrame(dict(ticker="000010", period_end=pd.to_datetime(["2026-03-31"]), sales=[3.0], rd_annual=[None])
+                 ).to_parquet(out / "cache26" / "000010.parquet")
+    fr.END = "2026-12-31"
+    fr.fetch_fundamentals(out, ["000010"], start_year=2026, max_calls=100, cache_name="cache26",
+                          base_table=out / "fundamentals.parquet", base_before_year=2026)
+    f = pd.read_parquet(out / "fundamentals.parquet").sort_values("period_end")
+    assert list(f["period_end"].dt.year) == [2024, 2025, 2026] and list(f["sales"]) == [1.0, 2.0, 3.0]
+print("dart safeguard tests passed")
 print("fetch tests passed")

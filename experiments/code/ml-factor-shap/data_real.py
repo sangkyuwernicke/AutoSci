@@ -199,8 +199,9 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
     price_only: skip fundamentals / macro / consensus (they need DART, ECOS) and return price-based factors plus
     SIZE = log(market cap) for the whole eligible universe -- used by factor_ic.py to check signals on ~2,500 names."""
     raw = Path(raw_dir)
-    long, last = (_price_block_monthly(raw) if (raw / "prices_monthly.parquet").exists()
-                  else _price_block_daily(raw))
+    # daily prices (prepare_marcap.py) win over month-end snapshots (prepare_krx.py)
+    long, last = (_price_block_daily(raw) if (raw / "prices.parquet").exists()
+                  else _price_block_monthly(raw))
     if market:
         last = last[last["market"] == market]
     panel = long.join(last, how="left").reset_index()
@@ -245,9 +246,17 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
 
     # ---- fundamentals as of filing date
     f = pd.read_parquet(raw / "fundamentals.parquet")
-    f["period_end"] = pd.to_datetime(f["period_end"]); f["filing_date"] = pd.to_datetime(f["filing_date"])
+    date_dtype = panel["date"].dtype                         # merge_asof needs identical datetime units
+    f["period_end"] = pd.to_datetime(f["period_end"]).astype(date_dtype)
+    f["filing_date"] = pd.to_datetime(f["filing_date"]).astype(date_dtype)
     rd = _rd_factors(f) if {"rd_annual", "sales_annual"} <= set(f.columns) else None
-    f = _fundamental_factors(f).sort_values("filing_date")
+    f = _fundamental_factors(f)
+    # A filing that lacks a line item should fall back on the previous quarter's value, not become a gap.
+    carry = [c for c in ["SALES_GROWTH", "OP_GROWTH", "ROE", "ROA", "OPM", "GPOA", "DEBT_RATIO", "QUICK_RATIO",
+                         "ICR", "ASSET_GROWTH", "CAPEX_INTENSITY", "net_income_ttm", "sales_ttm", "equity",
+                         "cfo_ttm", "EBITDA_ttm", "debt", "cash"] if c in f]
+    f[carry] = f.sort_values(["ticker", "period_end"]).groupby("ticker")[carry].ffill()
+    f = f.sort_values("filing_date")
     keep = ["ticker", "filing_date", "period_end", "SALES_GROWTH", "OP_GROWTH", "ROE", "ROA", "OPM",
             "GPOA", "DEBT_RATIO", "QUICK_RATIO", "ICR", "ASSET_GROWTH", "net_income_ttm", "sales_ttm",
             "equity", "cfo_ttm", "EBITDA_ttm", "debt", "cash"]
@@ -273,6 +282,7 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
     mac = pd.read_parquet(raw / "macro.parquet"); mac["avail_date"] = pd.to_datetime(mac["avail_date"])
     grid = pd.DataFrame({"date": sorted(panel["date"].unique())})
     grid["asof"] = grid["date"] - pd.offsets.MonthEnd(1) + pd.Timedelta(hours=23, minutes=59)
+    mac["avail_date"] = mac["avail_date"].astype(grid["asof"].dtype)      # merge_asof needs identical datetime units
     for name in MACRO:
         s = mac[mac["name"] == name].sort_values("avail_date")[["avail_date", "value"]]
         grid = pd.merge_asof(grid.sort_values("asof"), s, left_on="asof", right_on="avail_date",
@@ -282,4 +292,5 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
     panel = panel.dropna(subset=["ret_next", "mkt_next"] + MACRO)
     panel = coverage_filter(panel, min_coverage)
     feats = [c for c in EXTENDED_FACTORS if c in panel.columns]
-    return panel[["date", "ticker"] + feats + MACRO + ["ret_next", "mkt_next"]].reset_index(drop=True)
+    extra = [c for c in ("mcap",) if c in panel.columns]               # evaluation only (KOSPI200 proxy), never a model input
+    return panel[["date", "ticker"] + feats + MACRO + ["ret_next", "mkt_next"] + extra].reset_index(drop=True)

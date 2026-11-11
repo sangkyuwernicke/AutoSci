@@ -32,7 +32,7 @@ from sklearn.metrics import roc_auc_score
 import evaluation as ev
 import shap_analysis as sa
 from config import FACTOR_SETS, MACRO, MODELS, REGIME_VARS
-from features import add_target, cross_sectional_transform, macro_to_regime
+from features import add_target, impute_ffill, cross_sectional_transform, macro_to_regime
 from models import build, score, tune
 
 
@@ -46,9 +46,14 @@ def parse():
     a.add_argument("--seed", type=int, default=0)
     a.add_argument("--n-jobs", type=int, default=-1)
     a.add_argument("--n-stocks", type=int, default=300, help="synthetic only")
-    a.add_argument("--train-start", type=int, default=2014)
+    a.add_argument("--train-start", type=int, default=2021)
     a.add_argument("--test-start", type=int, default=2022)
     a.add_argument("--test-end", type=int, default=2025)
+    a.add_argument("--target", choices=["direction", "excess"], default="direction",
+                   help="direction (default): y=1 iff the stock's own next-month return > 0, then hold the top-q by "
+                        "predicted P(up). excess: y=1 iff beating the market (relative label, legacy)")
+    a.add_argument("--max-missing", type=float, default=0.3,
+                   help="drop factors still missing in more than this share of rows after forward-fill")
     a.add_argument("--target-quantile", type=float, default=None,
                    help="y=1 for the top (1-q) share by monthly excess return, e.g. 0.8 -> top 20%% (1:4); "
                         "exclusive with --target-margin")
@@ -60,7 +65,17 @@ def parse():
     a.add_argument("--min-coverage", type=float, default=0.5,
                    help="real data: drop stock-months with < this share of the 13 statement-based factors")
     a.add_argument("--scale", choices=["quantile", "zscore"], default="quantile")
-    a.add_argument("--top-q", type=float, default=0.2)
+    a.add_argument("--top-q", type=float, default=0.2, help="fraction held; used only when --top-k is 0")
+    a.add_argument("--kospi200-csv", default="data/krx/index_kospi200.csv",
+                   help="official KOSPI200 price index (KRX download: 일자,종가); added to the benchmarks if present")
+    a.add_argument("--kospi200-ew-csv", default="data/krx/index_kospi200_ew.csv",
+                   help="official KOSPI200 equal-weight price index (KRX download: 일자,종가); added to the benchmarks if present")
+    a.add_argument("--tune-metric", choices=["monthly", "pooled"], default="monthly",
+                   help="Optuna objective on the validation year: monthly (default) = mean of the per-month AUC, i.e. "
+                        "cross-sectional ordering only, as the top-K portfolio uses it; pooled = one AUC over all "
+                        "validation rows, which also rewards guessing each month's market direction from macro")
+    a.add_argument("--top-k", type=int, default=200,
+                   help="number of stocks held (top-k by predicted P(up)); 0 = use --top-q instead")
     a.add_argument("--cost", type=float, default=0.002, help="applied to sum|dw| each rebalance")
     a.add_argument("--shap-model", default="lgbm", choices=["rf", "xgb", "lgbm", "catboost"])
     a.add_argument("--n-perm", type=int, default=2000)
@@ -87,10 +102,13 @@ def parse():
     if q.small_data:
         a.set_defaults(models=["logit", "lgbm", "catboost"])
     if q.quick:
-        a.set_defaults(n_stocks=100, top_n_mcap=100, market="KOSPI", start_date="2020-01-02",
-                       train_start=2020, test_start=2023, test_end=2025,
+        a.set_defaults(n_stocks=100, top_n_mcap=100, market="KOSPI", start_date="2021-01-01",
+                       train_start=2021, test_start=2023, test_end=2025,
                        trials=15, n_perm=500, n_inter=1000)
     return a.parse_args()
+
+
+FSET_LABELS = {"firm": "Firm-only", "full": "Firm+Macro", "gated": "Firm+Macro (gating)"}   # report display only
 
 
 def load(args):
@@ -128,7 +146,17 @@ def main():
         from data_quality import quality_report
         quality_report(raw, firm_cols + macro_cols_avail).to_csv(out / "data_quality.csv")
 
-    panel = add_target(raw, args.target_margin, args.target_quantile)
+    raw, kept, imp_rep = impute_ffill(raw, firm_cols, args.max_missing)
+    imp_rep.to_csv(out / "imputation_report.csv")
+    dropped = [c for c in firm_cols if c not in kept]
+    if dropped:
+        print(f"dropped factors (> {args.max_missing:.0%} missing after ffill): {dropped}")
+    firm_cols = kept
+    print("residual missing share (median-imputed after rank transform): "
+          f"{raw[firm_cols].isna().mean().mean():.3%}")
+    panel = add_target(raw, args.target_margin, args.target_quantile,
+                       direction=(args.target == "direction" and args.target_quantile is None
+                                  and args.target_margin == 0.0))
     panel = panel[panel.label_year >= args.train_start]
     if args.macro_mode == "regime":
         panel = macro_to_regime(panel, macro_cols_avail)
@@ -185,10 +213,11 @@ def main():
                 t1 = time.time()
                 bp, bv = tune(name, tr[cols], tr.y, va[cols], va.y,
                               args.trials, args.seed, args.n_jobs,
-                              small=args.small_data, firm_cols=fc, macro_cols=mc)
+                              small=args.small_data, firm_cols=fc, macro_cols=mc,
+                              groups_va=va["date"] if args.tune_metric == "monthly" else None)
                 model = build(name, bp, args.seed, args.n_jobs, fc, mc).fit(trva[cols], trva.y)
                 s = score(model, te[cols])
-                preds.append(te[["date", "ticker", "y", "ret_next", "mkt_next"]].assign(
+                preds.append(te[["date", "ticker", "y", "ret_next", "mkt_next"] + (["mcap"] if "mcap" in te else [])].assign(
                     score=s, model=name, fset=fset, test_year=Y))
                 best[f"{Y}/{fset}/{name}"] = dict(params=bp, val_auc=bv)
                 print(f"  {fset:5s} {name:12s} val AUC {bv:.4f}  "
@@ -221,16 +250,43 @@ def main():
     (out / "best_params.json").write_text(json.dumps(best, indent=1, default=float))
 
     # ── Prediction metrics + backtest ─────────────────────────────────────────
+    if args.top_k:
+        args.top_q = float(args.top_k)                       # evaluation.select_k reads >= 1 as a count
+    months = pd.DatetimeIndex(sorted(pred["date"].unique()))
+    # Primary benchmark: official KOSPI200 equal-weight (same weighting as the model portfolios); falls back to the
+    # cap-weighted market index of the universe when the KRX file is absent. WinRate_vs_bm / Excess_mo use it.
+    ew = off = None
+    if Path(args.kospi200_ew_csv).exists():
+        ew = ev.index_monthly_return(args.kospi200_ew_csv, months)
+        ew.rename("kospi200_ew_official").to_csv(out / "kospi200_ew_official_monthly.csv")
+    if Path(args.kospi200_csv).exists():
+        off = ev.index_monthly_return(args.kospi200_csv, months)
+        off.rename("kospi200_official").to_csv(out / "kospi200_official_monthly.csv")
+    primary_name = "KOSPI200_EW_OFFICIAL" if ew is not None else "MARKET"
     rows, bt = [], {}
     for (name, fset), g in pred.groupby(["model", "fset"]):
         r = {"model": name, "fset": fset, **ev.prediction_metrics(g, args.top_q)}
         b = ev.backtest(g, args.top_q, args.cost)
+        pb = ew if ew is not None else b.bench
+        b["bench_primary"] = pb.reindex(b.index)
         bt[(name, fset)] = b
-        r.update(ev.perf_stats(b.net, b.bench, b.turnover[~b["first"]]))
+        r.update(ev.perf_stats(b.net, pb, b.turnover[~b["first"]]))
         rows.append(r)
     ref = next(iter(bt.values()))
-    bench = pd.DataFrame([{"model": "MARKET",      "fset": "-", **ev.perf_stats(ref.bench)},
-                          {"model": "EW_UNIVERSE", "fset": "-", **ev.perf_stats(ref.universe, ref.bench)}])
+    pb = ew if ew is not None else ref.bench
+    print(f"primary benchmark: {primary_name}")
+    bench = pd.DataFrame([{"model": "MARKET",      "fset": "-", **ev.perf_stats(ref.bench, pb)},
+                          {"model": "EW_UNIVERSE", "fset": "-", **ev.perf_stats(ref.universe, pb)}])
+    if off is not None:                                      # official KOSPI200 (cap-weighted) price index
+        bench = pd.concat([bench, pd.DataFrame([{"model": "KOSPI200_OFFICIAL", "fset": "-",
+                                                 **ev.perf_stats(off, pb)}])], ignore_index=True)
+    if ew is not None:                                       # official KOSPI200 equal-weight price index (primary)
+        bench = pd.concat([bench, pd.DataFrame([{"model": "KOSPI200_EW_OFFICIAL", "fset": "-",
+                                                 **ev.perf_stats(ew, pb)}])], ignore_index=True)
+    if "mcap" in pred:                                       # KOSPI200 proxy (top-200 by market cap, cap-weighted)
+        k200 = ev.cap_weighted_top(pred.drop_duplicates(["date", "ticker"]), 200).reindex(ref.index)
+        bench = pd.concat([bench, pd.DataFrame([{"model": "KOSPI200_PROXY", "fset": "-",
+                                                 **ev.perf_stats(k200, pb)}])], ignore_index=True)
     res = pd.concat([pd.DataFrame(rows), bench], ignore_index=True)
     res.to_csv(out / "metrics.csv", index=False)
     pd.concat({f"{k[0]}/{k[1]}": v for k, v in bt.items()}, names=["strategy"]).to_csv(out / "backtest_monthly.csv")
@@ -358,15 +414,21 @@ def main():
 
     # ── Report ────────────────────────────────────────────────────────────────
     report_cols = [c for c in ["model", "fset", "auc_pooled", "auc_monthly", "pr_auc", "prec_at_k",
-                               "base_rate", "CAGR", "Sharpe", "MDD", "WinRate_vs_bm", "Turnover"]
+                               "base_rate", "CAGR", "Sharpe", "MDD", "WinRate_vs_bm", "Excess_mo", "t_excess",
+                               "Turnover"]
                    if c in res.columns]
     rep = [
         "# Experiment report",
-        f"data={args.data} trials={args.trials} cost={args.cost} top_q={args.top_q} "
-        f"margin={args.target_margin} quantile={args.target_quantile}",
+        f"data={args.data} trials={args.trials} cost={args.cost} top_q={args.top_q} (>=1: number of stocks) "
+        f"target={args.target} margin={args.target_margin} quantile={args.target_quantile}",
+        f"primary benchmark = {primary_name} (WinRate_vs_bm, Excess_mo [mean monthly excess] and t_excess are measured "
+        "against it)",
         "",
         "## Prediction + backtest (net of costs)", "```",
-        fmt(res[report_cols].fillna(np.nan)), "```", "",
+        fmt(res[report_cols].fillna(np.nan).assign(fset=lambda d: d["fset"].replace(FSET_LABELS))), "```", "",
+        "fset: Firm-only = firm characteristics only; Firm+Macro = firm characteristics and macro variables as direct "
+        "inputs; Firm+Macro (gating) = macro variables only set the factor weights (stored as firm / full / gated in "
+        "metrics.csv).", "",
         "## Resolving power", power_note, "",
         f"settings: small_data={args.small_data} macro_mode={args.macro_mode} "
         f"macro_role={args.macro_role} factor_set={args.factor_set} "

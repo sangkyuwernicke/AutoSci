@@ -355,6 +355,8 @@ def _extract_list_field_slugs(content: str, field: str) -> list[str]:
     for match in pat.finditer(content):
         for raw in match.group(1).split(","):
             slug = raw.strip().strip('"').strip("'").strip()
+            if slug.startswith("[[") and slug.endswith("]]"):
+                slug = slug[2:-2].strip()
             if slug:
                 out.append(slug)
     return out
@@ -368,10 +370,15 @@ def _extract_forward_targets(content: str, forward: dict, source_slug: str,
         field = forward['frontmatter_field']
         # link (single value) or list_link (list)
         val = extract_frontmatter_value(content, field)
-        # Skip list-format values for single-file check
-        if val and not val.startswith("["):
-            if (wiki_dir / target_kind / f"{val}.md").exists():
-                return [val]
+        # Skip list-format values, multi-value strings, or wikilink-wrapped values
+        if val and not val.startswith("[") and "," not in val:
+            # strip wikilink brackets if present
+            clean = val.strip().strip('"').strip("'")
+            if clean.startswith("[[") and clean.endswith("]]"):
+                clean = clean[2:-2].strip()
+            if clean and len(clean) < 200:  # sanity: real slugs are short
+                if (wiki_dir / target_kind / f"{clean}.md").exists():
+                    return [clean]
         return _extract_list_field_slugs(content, field)
     if 'body_section' in forward:
         sect = forward['body_section']
