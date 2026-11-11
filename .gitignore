@@ -62,8 +62,6 @@ wiki/topics/*
 !wiki/topics/.gitkeep
 wiki/people/*
 !wiki/people/.gitkeep
-wiki/ideas/*
-!wiki/ideas/.gitkeep
 wiki/experiments/*
 !wiki/experiments/.gitkeep
 wiki/methods/*
@@ -115,6 +113,7 @@ wiki/graph-view.html
 **/Untitled*.canvas
 **/未命名*.canvas
 
+data/
 # 임시
 .agents
 

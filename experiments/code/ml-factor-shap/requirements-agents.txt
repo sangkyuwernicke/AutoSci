@@ -1,0 +1,5 @@
+# TradingAgents (LLM multi-agent framework). Install into a SEPARATE virtual environment: it pins its own
+# LangChain / LangGraph stack. The adapter in agent_eval/ was written and tested against v0.7.0 (commit e8f5503).
+pandas
+pyarrow
+tradingagents @ git+https://github.com/TauricResearch/TradingAgents.git

@@ -1,0 +1,85 @@
+# Pilot Spec for: global-linkage-channel-ablation-blanket-index
+pilot_spec:
+  # --- Core context (from idea Phase 2) ---
+  hypothesis: >
+    H1: either global-linkage channel formulation (blanket KOSPI-NASDAQ index correlation, D6a,
+    or concentration-weighted Samsung/SK-Hynix-vs-SOX mechanistic exposure, D6b) has positive
+    marginal Sharpe/return contribution over a price-only (D0) baseline for a single-agent (O0)
+    KOSPI trading agent. H2: D6b captures more of the marginal value than D6a. This pilot targets
+    only a cheap, diagnostic slice of H1/H2 (single-agent corner cells, short window) to detect
+    obvious failure before committing to the full 6-channel x 4-orchestration study.
+  approach_sketch: >
+    Single LLM trader agent (O0, one call per name per day) receives one of three information
+    conditions — D0 (OHLCV + simple technical indicators only), D6a (D0 + blanket rolling
+    60-day KOSPI-index-vs-NASDAQ-100 correlation, plus latest overnight NASDAQ-100/SOX/VIX/USD-KRW
+    returns), or D6b (D0 + the cap-weighted mechanistic signal r_mech,t = w_Samsung *
+    corr(Samsung_return, SOX_return)[t-60,t] + w_SKHynix * corr(SKHynix_return, SOX_return)[t-60,t],
+    plus the same raw overnight series) — and outputs BUY/SELL/HOLD + a position-size fraction in
+    strict JSON. A deterministic backtest engine executes the decisions against next-day returns
+    with a fixed transaction cost, long-only, no shorting.
+
+  # --- What to implement ---
+  implementation:
+    repo: "from-scratch"
+    entry_point: "run_pilot.py"
+    modifications: >
+      New minimal single-agent pipeline (not a fork of TradingAgents — O0 has no debate/risk-team
+      structure to reuse). Three channel builders (D0/D6a/D6b) share one data-fetch and one
+      backtest-execution module so the only varying input between conditions is the channel
+      content injected into the LLM prompt.
+    files_to_create:
+      - "data_fetch.py: pulls daily OHLCV for the pilot universe + NASDAQ-100/SOX/VIX/USD-KRW via yfinance, caches to CSV under experiments/pilot/code/{slug}/data/"
+      - "channels.py: builds the D0 / D6a / D6b context strings per (name, date), including the 60-day rolling correlation / cap-weighted mechanistic formula"
+      - "agent.py: single LLM call (O0) — sends the channel context + strict JSON schema instructions, parses BUY/SELL/HOLD + position_fraction, retries once on parse failure, falls back to HOLD"
+      - "backtest.py: deterministic walk-forward executor — applies parsed decisions to next-day returns, tracks equal-weight long-only portfolio equity curve, computes metrics"
+      - "run_pilot.py: entry point — loops over {D0, D6a, D6b} x {names} x {trading days}, calls agent.py, calls backtest.py, writes results/seed_1.json"
+
+  # --- What to run ---
+  setup:
+    model: "${LLM_MODEL} via ${LLM_BASE_URL} (existing project .env — same backbone used by mcp__llm-review, no fine-tuning)"
+    dataset: "yfinance daily OHLCV — pilot universe: 005930.KS (Samsung Electronics), 000660.KS (SK Hynix), 069500.KS (KODEX 200 ETF); cross-market series: ^KS11 (KOSPI index, for D6a), ^NDX (NASDAQ-100), ^SOX (PHLX Semiconductor), ^VIX, KRW=X (USD/KRW). ~4 calendar months of history fetched (60 trading days warm-up for rolling correlation + ~40 trading days decision/eval window ending at the most recent available session), deliberately overlapping the empirically documented 2026 high-KOSPI-NASDAQ-correlation window."
+    hardware: "cpu / none (no model training — LLM API calls + pandas/numpy backtest only)"
+    framework: "Python (pandas, numpy, yfinance, requests for the OpenAI-compatible LLM_BASE_URL)"
+    batch_size: "n/a (sequential per-name, per-day LLM calls; not a gradient-based training job)"
+    max_steps: "~40 trading days decision window x 3 names x 3 conditions (D0/D6a/D6b) = ~360 LLM calls total, reduced from the full study's ~32-month x 15-name x 6-channel design (roughly 5% of full scope, chosen for pilot cost, not the standard 10-30% step-count rule which does not directly apply to a non-training pipeline)"
+    learning_rate: "n/a (no training)"
+    seeds: 1
+    other_hparams: "transaction cost 0.20% per trade (matches the 2026 KRX tax assumption in the sibling harness); long-only; equal-weight target allocation across the 3-name pilot universe; JSON parse-failure fallback = HOLD"
+
+  # --- What to measure ---
+  metrics:
+    - name: "cumulative return"
+      why: "primary diagnostic — does any channel produce a catastrophic collapse relative to the others"
+    - name: "annualized Sharpe ratio (computed from the ~40-day daily return series, noisy but standard for a short diagnostic window)"
+      why: "risk-adjusted signal, matches the sibling harness's primary metric so results are comparable in kind (not magnitude) to the full study"
+    - name: "directional hit-rate (fraction of BUY/SELL calls whose direction matches the next-day return sign)"
+      why: "cheap, per-decision diagnostic that does not require the full portfolio simulation to be meaningful — useful if the portfolio-level metrics are too noisy over only 40 days"
+    - name: "JSON parse-failure / fallback-to-HOLD rate per condition"
+      why: "detects whether D6a/D6b's added context content breaks the agent's output formatting relative to D0 — a pure implementation-failure signal, not a research finding"
+
+  # --- What to compare against ---
+  baseline:
+    method: "D0 (price/technical-only channel), single agent (O0)"
+    source: "wiki/ideas/global-linkage-channel-ablation-blanket-index.md Approach sketch; sibling harness wiki/ideas/kospi-information-diet-vs-reasoning-scaffold.md defines D0 identically"
+    expected_value: "no prior empirical run exists yet (this is the first pilot for this idea family) — the pilot's own D0 cell serves as the baseline for D6a/D6b, not an external published number"
+
+  # --- What counts as success ---
+  success_criterion:
+    pass: >
+      No condition shows a JSON parse-failure/fallback rate above 10%; D6a and D6b each complete
+      the full run without crashing; D6b's cumulative return and Sharpe are not more than a small
+      margin below D0's (a modest gap is acceptable given the tiny 40-day/3-name sample — the pilot
+      is not powered to prove H1/H2 statistically); qualitatively, D6b's decisions show at least
+      directional plausibility around known co-movement days (e.g. large same-day NASDAQ/SOX moves
+      visible in the fetched data) if any occurred within the pilot window.
+    fail: >
+      Any condition crashes or has a JSON parse-failure/fallback rate above 30%; D6a or D6b produce
+      obviously degenerate behavior (e.g. always HOLD regardless of input, or ignore the channel
+      content entirely per manual trace inspection); D6b's performance is catastrophically worse
+      than D0's (e.g. wipes out a large fraction of capital while D0 does not) in a way not
+      explainable by the tiny sample size alone.
+    inconclusive: >
+      Everything runs cleanly and no condition is degenerate, but the ~40-day/3-name sample is too
+      small/noisy to say anything about relative channel value — expected and acceptable outcome
+      for this diagnostic pilot; /exp-pilot-eval should record this as "infrastructure validated,
+      proceed to full study" rather than treating it as a negative result.
