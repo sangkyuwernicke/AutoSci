@@ -11,7 +11,7 @@
   사용하는 비공식 엔드포인트(/api/news/search.do, /news/detailView.do)를 호출하므로 사이트 변경 시 깨질 수 있습니다.
 - KRX(KIND)는 뉴스 기사가 아니라 공시를 제공합니다. 기사 수집은 BigKinds를 사용하세요.
 - 이용약관/robots 및 저작권을 준수하고, 요청 간 지연(--delay)을 유지하세요.
-- 저장 위치 기본값 raw/tmp/news/ (raw/{papers,notes,web}은 읽기 전용이므로 사용하지 않음).
+- 저장 위치 기본값 data/news/ (실행 디렉터리 기준 상대 경로).
 """
 from __future__ import annotations
 
@@ -87,6 +87,12 @@ def fetch_fulltext(session, news_id: str) -> str:
     return clean((r.json().get("detail") or {}).get("CONTENT"))
 
 
+def norm_date(value) -> str:
+    """20151109 / 20151109.0 → 2015-11-09. 8자리 숫자가 아니면 원래 값을 문자열로 반환."""
+    digits = re.sub(r"\D", "", str(value))[:8]
+    return f"{digits[:4]}-{digits[4:6]}-{digits[6:8]}" if len(digits) == 8 else str(value)
+
+
 def from_excel(path: str, keyword: str = "") -> list[dict]:
     """BigKinds 웹에서 '분석기사 다운로드'한 엑셀을 동일 스키마로 변환."""
     import pandas as pd
@@ -95,7 +101,7 @@ def from_excel(path: str, keyword: str = "") -> list[dict]:
     c_id, c_date, c_prov = col("뉴스 식별자"), col("일자"), col("언론사")
     c_by, c_title, c_body, c_url = col("기고자"), col("제목"), col("본문"), col("URL")
     return [{
-        "id": str(r[c_id]) if c_id else "", "date": str(r[c_date]) if c_date else "",
+        "id": str(r[c_id]) if c_id else "", "date": norm_date(r[c_date]) if c_date else "",
         "provider": r[c_prov] if c_prov else "", "byline": r[c_by] if c_by else "",
         "title": clean(r[c_title]) if c_title else "", "content": clean(r[c_body]) if c_body else "",
         "url": r[c_url] if c_url else "", "keyword": keyword,
@@ -126,7 +132,7 @@ def main() -> int:
     ap.add_argument("--fulltext", action="store_true", help="기사 본문 전체 조회 (기사당 1회 추가 요청)")
     ap.add_argument("--delay", type=float, default=1.0)
     ap.add_argument("--from-excel", help="BigKinds 엑셀 다운로드 파일을 변환")
-    ap.add_argument("--out-dir", default="raw/tmp/news")
+    ap.add_argument("--out-dir", default="data/news")
     args = ap.parse_args()
 
     if args.from_excel:

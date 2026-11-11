@@ -33,7 +33,7 @@ import requests
 import _env  # noqa: F401 — .env 의 API 키 로드
 from fetch_news_bigkinds import save  # 동일 저장 포맷 재사용
 
-API = "https://openapi.naver.com/v1/search/news.json"
+API = "https://naverapihub.apigw.ntruss.com/search/v1/news"
 TAG_RE = re.compile(r"<[^>]+>")
 BODY_RE = re.compile(r'<article[^>]*id="dic_area"[^>]*>(.*?)</article>', re.S)
 
@@ -43,15 +43,18 @@ def clean(t: str | None) -> str:
 
 
 def search(keyword, max_items, sort="date", delay=0.2):
-    cid, sec = os.environ.get("NAVER_CLIENT_ID"), os.environ.get("NAVER_CLIENT_SECRET")
+    cid = os.environ.get("NAVER_API_CLIENT_ID") or os.environ.get("NAVER_CLIENT_ID")
+    sec = os.environ.get("NAVER_API_CLIENT_SECRET") or os.environ.get("NAVER_CLIENT_SECRET")
     if not cid or not sec:
-        raise SystemExit("NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 이 설정되지 않았습니다 (.env 확인).")
-    h = {"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": sec}
+        raise SystemExit("NAVER_API_CLIENT_ID / NAVER_API_CLIENT_SECRET 이 설정되지 않았습니다 (.env 확인).")
+    h = {"X-NCP-APIGW-API-KEY-ID": cid, "X-NCP-APIGW-API-KEY": sec}
     items, start = [], 1
     while len(items) < max_items and start <= 1000:
         size = min(100, max_items - len(items))
         r = requests.get(API, headers=h, timeout=30,
                          params={"query": keyword, "display": size, "start": start, "sort": sort})
+        if not r.ok:
+            print(f"HTTP {r.status_code}: {r.text}", file=sys.stderr)
         r.raise_for_status()
         rows = r.json().get("items") or []
         if not rows:
@@ -91,7 +94,7 @@ def main() -> int:
     ap.add_argument("--sort", choices=["date", "sim"], default="date")
     ap.add_argument("--fulltext", action="store_true")
     ap.add_argument("--delay", type=float, default=1.0)
-    ap.add_argument("--out-dir", default="raw/tmp/news")
+    ap.add_argument("--out-dir", default="data/news")
     a = ap.parse_args()
 
     items = search(a.keyword, a.max, a.sort)

@@ -27,7 +27,8 @@ def load() -> None:
         return
     _LOADED = True
 
-    for env_path in [pathlib.Path.home() / ".env", pathlib.Path(".env")]:
+    repo_root_env = pathlib.Path(__file__).resolve().parents[4] / ".env"
+    for env_path in [pathlib.Path.home() / ".env", pathlib.Path(".env"), repo_root_env]:
         if not env_path.exists():
             continue
         try:
