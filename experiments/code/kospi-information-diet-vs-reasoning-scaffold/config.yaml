@@ -1,0 +1,50 @@
+pilot:
+  slug: kospi-information-diet-vs-reasoning-scaffold
+  seed: 1
+
+data:
+  kospi_tickers:              # yfinance-style tickers, for OHLCV
+    samsung: "005930.KS"
+    sk_hynix: "000660.KS"
+    kodex200: "069500.KS"
+  krx_stock_codes:            # bare 6-digit codes, for pykrx investor-flow
+    samsung: "005930"
+    sk_hynix: "000660"
+    kodex200: "069500"
+  dart_corp_codes:            # OpenDART corp_code, verified live against corpCode.xml
+    samsung: "00126380"
+    sk_hynix: "00164779"
+    # kodex200: intentionally absent — it's an ETF with no DART disclosure history;
+    # its D5 cell gets the news + flow channels only, not disclosures (expected asymmetry)
+  history_period: "6mo"
+  cache_dir: "data"
+  dart_lookback_days: 90
+  flow_lookback_days: 20
+
+windows:
+  technical_sma_short: 5
+  technical_sma_long: 20
+  technical_rsi_period: 14
+  decision_window_days: 5   # reduced from 15 for a cheaper/faster full-cell test run
+
+cells:                        # the 4-cell 2x2 design from the idea's simplified scope
+  - [D1, S0]
+  - [D1, S3]
+  - [D5, S0]
+  - [D5, S3]
+
+execution:
+  transaction_cost_bps: 20    # 0.20%, matches the idea's 2026 KRX tax assumption
+  long_only: true
+  fallback_action: "HOLD"
+  fallback_position_fraction: 0.0
+  max_llm_retries: 1
+
+scaffold:
+  debate_rounds: 1            # reduced from the full study's un-fixed 1-3 round range
+
+llm:
+  temperature: 0.2
+  max_tokens: 400
+  analyst_max_tokens: 250
+  request_timeout_s: 60

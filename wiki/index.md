@@ -343,6 +343,12 @@ concepts:
     title: "Vision-Language Alignment"
     tags: [vision-language, multimodal, alignment]
     maturity: active
+- slug: quant-arena-benchmarking-llm-agents-quantitative
+- slug: lineage-aware-search-control-llm-based
+
+concepts:
+- slug: sealed-holdout-end-end-quant-research
+- slug: lineage-level-search-control
 
 topics:
   - slug: agentic-trading
@@ -567,6 +573,8 @@ methods:
   - slug: tree-thoughts
     tags: [reasoning, planning, search, llm, agentic-ai]
     type: inference
+- slug: quant-arena-benchmark
+- slug: lineageevo
 
 experiments:
 
