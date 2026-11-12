@@ -1,0 +1,7 @@
+﻿Factor,avg N (whole KOSPI),IC raw (whole KOSPI),IC resid (whole KOSPI)
+SENT_MEAN_1W,58.7,-0.016 (-1.1),+0.003 (+0.2)
+SENT_MEAN_1M,153.3,+0.004 (+0.4),+0.015 (+1.6)
+SENT_MEAN_3M,260.0,+0.004 (+0.5),+0.011 (+1.6)
+SENT_CHG,37.1,-0.017 (-1.0),-0.010 (-0.6)
+SENT_STD_1M,39.9,-0.011 (-0.6),-0.014 (-0.9)
+NEWS_COUNT_1M,620.5,-0.005 (-0.6),+0.006 (+1.0)
