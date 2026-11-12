@@ -105,8 +105,18 @@ python run_experiment.py --quick --data real --raw-dir data/real --out results/q
 python run_experiment.py --quick --data real --raw-dir data/real --factor-set extended --out results/q_ext
 python compare_runs.py results/q_base results/q_ext --labels base extended --out results/base_vs_ext
 python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6   # 선택, 벤더 데이터 필요
+# 3b) 뉴스 감성 팩터(KR-FinBert-SC / 사전)와, 감성 없는 실행과의 쌍체 비교
+python build_news_sentiment_panel.py --method model --out-dir data/news/sentiment_cmp/finbert
+python prepare_sentiment.py --in-dir data/news/sentiment_cmp --out data/real
+python run_experiment.py --quick --data real --raw-dir data/real --sentiment finbert --test-end 2025 --out results/q_sent_finbert
+python compare_runs.py results/q_base results/q_sent_finbert --labels base finbert --out results/base_vs_finbert
+python factor_ic.py --data real --raw-dir data/real --market KOSPI --start-date 2017-01-01 --end-date 2025-12-31 \
+    --sentiment finbert --residualize-on RET_1M RET_3M VOL_20D mcap --out results/ic_sent   # 원본 IC와 통제 후 잔차 IC
+python daily_sentiment_ic.py --out results/daily_sentiment      # 일별 순위 IC + 일별 롱숏, 진입 시점 A / B
+python weekly_sentiment_ic.py --out results/weekly_sentiment    # 5일 신호, 5일 보유, 리밸런싱 요일 5가지
+python make_summary_table.py --none results/q_base --finbert results/q_sent_finbert --out results/summary   # 아래 표의 제한 참조
 # 4) 테스트 (오프라인)
-for t in lookahead forward universe krx fetch pilot macro_gated; do python tests/test_$t.py; done
+for t in lookahead forward universe krx fetch pilot macro_gated target_impute topk tune_metric sentiment daily_sentiment weekly_sentiment summary_table; do python tests/test_$t.py; done
 ```
 
 | 파일 | 역할 |
@@ -118,8 +128,16 @@ for t in lookahead forward universe krx fetch pilot macro_gated; do python tests
 | `fetch_real_data.py` | ECOS 거시 지표, Open DART 재무제표 수집기 (실제 API로 검증 안 됨, 재시작 가능, 호출 수 제한) |
 | `universe.py` | 금융업·스팩·우선주 제외, `exclusions.csv`, 재무 커버리지 필터 |
 | `prepare_consensus.py` | 벤더의 시점별 컨센서스 export 검증·정규화 → `consensus.parquet` |
+| `build_news_sentiment_panel.py` | BigKinds 연도별 엑셀 → 코스피 종목별 일별 뉴스 감성, KR-FinBert-SC (`--method model`, 기본값) |
+| `compare_sentiment_methods.py` | 사전 vs KR-FinBert 비교: 기사·종목-일 단위 일치도, 다음날·5일 선행 순위 IC. 이 스크립트의 일별 IC는 뉴스 날짜 이전 마지막 거래일 종가에 진입하므로(주말 기사는 기사가 나오기 전에 진입) 상한값으로만 보고, 시점이 깨끗한 값은 `daily_sentiment_ic.py`를 쓴다 |
+| `prepare_sentiment.py` | 일별 FinBert 감성 패널 → `--sentiment` 용 `data/real/sentiment_finbert.parquet` |
+| `sentiment.py` | 종목×일 감성 → 월말 팩터 (후행 윈도우, 지연 적용, look-ahead 없음) |
+| `daily_sentiment_ic.py` | 일별 순위 IC와 일별 롱숏·롱온리 포트폴리오(연도별). 주말·휴일 기사는 다음 거래일로 이월, 진입 A(같은 날 종가, 낙관) vs B(다음 거래일 종가, 실행 가능), 비용은 Σ\|dw\| 기준 |
+| `weekly_sentiment_ic.py` | 같은 분석의 주 단위 버전: 최근 5거래일 신호, 5일 보유, 리밸런싱 요일 5가지 평균 |
+| `analyze_auc_sources.py` | 모델 AUC의 출처 분해: 점수에서 변동성·규모·반전·모멘텀·가치·수익성을 월별 횡단면으로 제거한 잔차 AUC, 팩터 단독 AUC와 점수와의 상관(`results/v18_auc_sources/`) |
+| `make_summary_table.py` | Firm × Macro × Sentiment 표 (Panel A: 두 실행의 `predictions.parquet`에서 모델별 AUC·순 Sharpe와 블록 부트스트랩 CI를 붙인 통합 효과, Panel B: 감성 IC). 모델은 데이터에서 읽는다(7모델 `--quick`과 `--small-data` 쌍 모두 동작). 코스피 전 종목 200개 보유는 `--top-q 200`, Panel B는 `--ic <factor_ic 결과 디렉터리>=<라벨> ...`로 지정한다(기본값은 `--quick`의 상위 100/200 실행) |
 | `compare_runs.py` | 두 실행(base vs extended) 쌍체 비교: 월별 AUC / Precision@K / 순 Sharpe, t검정, Wilcoxon, 블록 부트스트랩 |
-| `factor_ic.py` | 팩터별 월별 순위 IC (차기월 초과수익과의 상관), 파일럿 모드 참조 |
+| `factor_ic.py` | 팩터별 월별 순위 IC (차기월 초과수익과의 상관), 파일럿 모드 참조. 감성 팩터용 `--sentiment`, `--end-date`, `--residualize-on` 옵션, `avg_n` = IC 계산에 쓰인 종목 수 |
 | `pilot_suite.py` | 팩터 IC, 파일럿 설정 3종, 쌍체 비교를 한 번에 실행 |
 | `data_quality.py` | 팩터별 결측·0 비율·이상치·커버리지 리포트 (`data_quality.csv`) |
 | `features.py` | 타깃 생성, 월별 윈저라이징(1/99%) + 순위 정규화 또는 z-score |
@@ -127,6 +145,40 @@ for t in lookahead forward universe krx fetch pilot macro_gated; do python tests
 | `evaluation.py` | AUC, PR-AUC, Precision@20%, 백테스트, H1 쌍체 검정, H2 블록 부트스트랩 |
 | `shap_analysis.py` | SHAP, 순열검정을 이용한 국면 비교, 거시×기업 상호작용 |
 | `run_experiment.py` | 전체 오케스트레이션 → `results/<run>/report.md` + csv/png |
+
+## 뉴스 감성 팩터 (`--sentiment finbert`)
+
+선택 사항. 기업 팩터에 덧붙이므로 Firm-only와 Firm+Macro 모두에 포함된다. 효과는 `--sentiment none` 실행과
+`compare_runs.py`로 쌍체 비교해 잰다. 출처: BigKinds의 매일경제 증권증시 기사를 종목명으로 코스피 보통주에 매칭
+(제목 + 200자 요약만 사용).
+
+| 팩터 | 정의 (윈도우 종료일 = 월말 − `--sentiment-lag-days`, 기본 1일) |
+|---|---|
+| `SENT_MEAN_1W` / `_1M` / `_3M` | 최근 7 / 30 / 90일 기사 수 가중 평균 점수 |
+| `SENT_CHG` | `SENT_MEAN_1W` − 그 직전 23일 평균 (단기 논조 변화) |
+| `SENT_STD_1M` | 30일간 일별 평균 점수의 표준편차 (뉴스 있는 날 3일 이상) |
+| `NEWS_COUNT_1M` | log(1 + 30일 기사 수). 0 = 뉴스 없음 |
+
+뉴스가 없으면 0이나 전월 값이 아니라 **결측**이다. 이 컬럼들은 `impute_ffill`과 `--max-missing`을 거치지 않고 월별
+순위 변환 후 중앙값으로 대체된다. 커버리지가 희소하다(코스피 시총 상위 100, 2021년 이후: 종목-월의 58%만 30일 내 뉴스,
+`SENT_MEAN_1W` 28%, `SENT_STD_1M` 25%) → 주별·변화·분산 팩터는 대부분 대체값이다. 뉴스는 2025-12-31까지라
+`--test-end 2025`를 유지해야 한다(이후 달은 "뉴스 없음"처럼 보이므로 경고를 출력한다).
+
+### 지금까지의 증거 (`results/v16_*`, `v17_*`; 탐색적이며 다중 비교 보정 없음)
+
+- **월 단위 모델, 코스피 전 종목**(약 620종목, 200개 보유, 2020~2025 테스트 72개월): 감성 유무에 따른 월별 AUC
+  차이는 -0.005~+0.005이고 모든 쌍체 CI가 0을 포함한다. 순 Sharpe는 6개 구성 모두 올랐지만(평균 +0.04)
+  비교 6개를 보정하면 유의하지 않다.
+- **월 단위 단일 팩터 IC**(코스피 전 종목): `SENT_*`의 |t| ≤ 1.5. `NEWS_COUNT_1M`은 변동성·반전을 제거하면
+  유의해 보이지만(+0.044, t 5.4) 규모 대리변수다(시가총액까지 제거하면 +0.006, t 1.0).
+- **일 단위**(`daily_sentiment_ic.py`): 같은 날 진입(A)에서 순위 IC 0.02~0.04, 다음 거래일 진입(B)에서는 약 0.
+  일별 롱숏은 최대 4 중 약 3.6이 매일 교체되어 비용 0.2% × Σ|dw|가 모든 해에서 총수익을 넘는다.
+  하루에 뉴스가 있는 종목은 약 18개.
+- **주 단위**(`weekly_sentiment_ic.py`): 순 Sharpe가 2025에서만 양(+)(+0.3~+0.5, 리밸런싱 요일에 따라
+  -0.3~+1.3)이고 2020~2024는 음(-), 시총 상위 200에서는 2025에도 음(-)이다(2025의 이득은 실제 비용이 더 큰
+  소형주에 몰려 있는 것으로 보이나 검증하지 않았다).
+- **점수 방식**: 사전 → FinBert 교체는 기사 라벨을 크게 바꿨지만(kappa 0.28) 월 단위 결과는 그대로였다.
+  다른 방식(예: LLM)은 시험하지 않았고, LLM은 학습 데이터가 2015~2025를 포함하므로 look-ahead 점검이 필요하다.
 
 ## 확장 팩터 (`--factor-set extended`)
 
@@ -252,3 +304,10 @@ python factor_ic.py --data real --raw-dir data/real --price-only --market KOSPI 
   `exclusions.csv`로 만들어야 합니다.
 - 시점별 애널리스트 컨센서스는 무료로 구할 수 없고, 없으면 선행 팩터 4개가 제외됩니다.
 - 합성 데이터 결과는 코드 경로만 검증하며 한국 시장에 대해서는 아무것도 말해 주지 않습니다.
+- **`--quick`과 `--top-k`:** `--quick`은 월 약 91종목인데 `--top-k` 기본값이 200이라 모든 모델이 전 종목을 보유하게 되고,
+  `report.md`·`metrics.csv`의 CAGR / Sharpe / MDD / Precision@K가 모델 간에 똑같아집니다(경고를 출력하고
+  `report.md`에도 적습니다). `--top-k 20`을 쓰거나 AUC와 `compare_runs.py`(저장된 점수에서 상위 20%를 다시
+  고름)로 비교하세요. 원래 설계는 코스피 전 종목(`--top-n-mcap 0`, 약 650종목) 중 200개를 보유하고 공식
+  KOSPI200 동일가중 지수와 비교하는 것입니다.
+- **뉴스 데이터:** BigKinds의 매일경제 증권증시 한 곳, 제목 + 200자 요약, 발행 날짜만 있고 시각은 없어서(일 단위
+  결과를 진입 시점 A와 B로 나눠 보는 이유) 2025-12-31까지입니다.

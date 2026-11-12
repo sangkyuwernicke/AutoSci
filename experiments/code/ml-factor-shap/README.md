@@ -20,8 +20,18 @@ python run_experiment.py --quick --data real --raw-dir data/real --out results/q
 python run_experiment.py --quick --data real --raw-dir data/real --factor-set extended --out results/q_ext
 python compare_runs.py results/q_base results/q_ext --labels base extended --out results/base_vs_ext
 python prepare_consensus.py vendor_export.csv --out data/real/consensus.parquet --unit 1e6   # optional, vendor data
+# 3b) news-sentiment factors (KR-FinBert-SC) and paired comparison against the run without them
+python build_news_sentiment_panel.py --method model --out-dir data/news/sentiment_cmp/finbert
+python prepare_sentiment.py --in-dir data/news/sentiment_cmp --out data/real
+python run_experiment.py --quick --data real --raw-dir data/real --sentiment finbert --test-end 2025 --out results/q_sent_finbert
+python compare_runs.py results/q_base results/q_sent_finbert --labels base finbert --out results/base_vs_finbert
+python factor_ic.py --data real --raw-dir data/real --market KOSPI --start-date 2017-01-01 --end-date 2025-12-31 \
+    --sentiment finbert --residualize-on RET_1M RET_3M VOL_20D mcap --out results/ic_sent   # IC raw and net of controls
+python daily_sentiment_ic.py --out results/daily_sentiment      # daily rank IC + long-short book by year, entry timing A / B
+python weekly_sentiment_ic.py --out results/weekly_sentiment    # 5-day signal, 5-day hold, five rebalance phases
+python make_summary_table.py --none results/q_base --finbert results/q_sent_finbert --out results/summary   # see its row below
 # 4) tests (offline)
-for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py; done
+for t in lookahead forward universe krx fetch pilot macro_gated target_impute topk tune_metric sentiment daily_sentiment weekly_sentiment summary_table; do python tests/test_$t.py; done
 ```
 
 | file | role |
@@ -33,8 +43,16 @@ for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py;
 | `fetch_real_data.py` | ECOS macro and Open DART fundamentals collectors (untested against live APIs; resumable, call-limited) |
 | `universe.py` | financial / SPAC / preferred screens, `exclusions.csv`, statement-coverage filter |
 | `prepare_consensus.py` | validates/normalises a vendor point-in-time consensus export → `consensus.parquet` |
+| `build_news_sentiment_panel.py` | BigKinds yearly xlsx → per-KOSPI-stock daily news sentiment with KR-FinBert-SC (`--method model`, default) |
+| `compare_sentiment_methods.py` | lexicon vs KR-FinBert study (not part of the experiment): agreement, next-day / 5-day rank IC. Its daily IC enters at the last trading day's close on or before the news date (weekend news enters before it exists), so treat it as an upper bound; `daily_sentiment_ic.py` replaces it for timing-clean numbers |
+| `prepare_sentiment.py` | daily FinBert panel → `data/real/sentiment_finbert.parquet` for `--sentiment` |
+| `sentiment.py` | daily ticker × date sentiment → month-end factors (trailing windows, lagged, no look-ahead) |
+| `daily_sentiment_ic.py` | daily rank IC and daily long-short / long-only books by year; news rolled to the next trading day; entry A (same-day close, optimistic) vs B (next-day close, tradable); costs on sum\|dw\| |
+| `weekly_sentiment_ic.py` | same at a weekly horizon: 5-trading-day trailing signal, 5-day hold, averaged over the five rebalance phases |
+| `analyze_auc_sources.py` | where a model's AUC comes from: monthly AUC of the score after removing volatility, size, reversal, momentum, value and quality month by month, plus single-factor AUC and correlation with the score (`results/v18_auc_sources/`) |
+| `make_summary_table.py` | Firm × Macro × Sentiment table (Panel A: per-model AUC / net Sharpe from two runs' `predictions.parquet`, pooled effects with block-bootstrap CI; Panel B: sentiment IC). Models are read from the data (7-model `--quick` or `--small-data` pairs both work); `--top-q 200` for the whole-KOSPI book of 200 stocks; Panel B takes `--ic <factor_ic dir>=<label> ...` (default: the `--quick` top-100/200 runs) |
 | `compare_runs.py` | paired comparison of two runs (base vs extended): monthly AUC / Precision@K / net Sharpe, t, Wilcoxon, block bootstrap |
-| `factor_ic.py` | single-factor monthly rank IC vs next-month excess return (see Pilot mode) |
+| `factor_ic.py` | single-factor monthly rank IC vs next-month excess return (see Pilot mode); `--sentiment`, `--end-date`, `--residualize-on` for the sentiment factors, `avg_n` = stocks behind each IC |
 | `pilot_suite.py` | runs factor IC, three pilot configurations and the paired comparison |
 | `data_quality.py` | per-factor missing / zero / outlier / coverage report (`data_quality.csv`) |
 | `features.py` | target, per-month winsorize (1/99) + rank-gauss or z-score |
@@ -42,6 +60,41 @@ for t in lookahead forward universe krx fetch pilot; do python tests/test_$t.py;
 | `evaluation.py` | AUC, PR-AUC, Precision@20 %, backtest, H1 paired tests, H2 block bootstrap |
 | `shap_analysis.py` | SHAP, regime comparison with permutation test, macro×firm interactions |
 | `run_experiment.py` | orchestration → `results/<run>/report.md` + csv/png |
+
+## News-sentiment factors (`--sentiment finbert`)
+
+Opt-in. Appended to the firm factors, so Firm-only vs Firm+Macro both include them; measure their effect by
+pairing a run with `--sentiment none` against one without (`compare_runs.py`). Source: Maeil Business (매일경제)
+securities section via BigKinds, matched to KOSPI common stocks by name; only title + 200-char summary.
+
+| factor | definition (window ends at month-end − `--sentiment-lag-days`, default 1) |
+|---|---|
+| `SENT_MEAN_1W` / `_1M` / `_3M` | article-weighted mean score over the last 7 / 30 / 90 days |
+| `SENT_CHG` | `SENT_MEAN_1W` − mean over the 23 days before it (short-term change of tone) |
+| `SENT_STD_1M` | std of the per-day mean scores over 30 days (≥ 3 news-days) |
+| `NEWS_COUNT_1M` | log(1 + articles in 30 days); 0 = no news |
+
+No news is **missing**, never 0 or the previous month: these columns skip `impute_ffill` and `--max-missing` and are
+median-imputed after the monthly rank transform. Coverage is sparse (KOSPI top-100, 2021+: 58 % of stock-months have
+news in 30 days, `SENT_MEAN_1W` 28 %, `SENT_STD_1M` 25 %), so the weekly/change/dispersion factors are mostly imputed.
+News ends 2025-12-31: keep `--test-end 2025` (a warning is printed otherwise; later months look like "no news").
+
+### Evidence so far (`results/v16_*`, `v17_*`; exploratory, not corrected for multiple comparisons)
+
+- **Monthly model, whole KOSPI** (~620 stocks, hold 200, 72 test months 2020-2025): monthly AUC with vs without
+  FinBert differs by -0.005 to +0.005, every paired CI contains 0. Net Sharpe is higher in all six cells
+  (mean +0.04) but not significant once six comparisons are accounted for.
+- **Single-factor monthly IC** (whole KOSPI): `SENT_*` |t| <= 1.5. `NEWS_COUNT_1M` looks significant after removing
+  volatility and reversal (+0.044, t 5.4) but is a size proxy (+0.006, t 1.0 once market cap is removed too).
+- **Daily** (`daily_sentiment_ic.py`): rank IC 0.02-0.04 with same-day entry (A), about 0 with next-day entry (B).
+  The daily long-short book turns over ~3.6 of a maximum 4 each day, so cost 0.2% x sum|dw| exceeds the gross
+  return in every year. Number of stocks with news per day: ~18.
+- **Weekly** (`weekly_sentiment_ic.py`): net Sharpe positive only in 2025 (+0.3 to +0.5; across rebalance phases
+  -0.3 to +1.3), negative in 2020-2024, and negative for the top-200 by market cap even in 2025 (the 2025 gain
+  looks concentrated in small caps, where real costs are higher; not verified).
+- **Scorer quality** (lexicon -> FinBert changed article labels a lot, kappa 0.28) left the monthly results unchanged;
+  other scorers (e.g. an LLM) are untested, and any LLM run needs a look-ahead check because its training data
+  covers 2015-2025.
 
 ## Extended factors (`--factor-set extended`)
 
@@ -168,3 +221,10 @@ python factor_ic.py --data real --raw-dir data/real --price-only --market KOSPI 
   a KRX KIND download for `exclusions.csv`.
 - Point-in-time analyst consensus is not freely available; without it the four forward-looking factors are skipped.
 - Synthetic results validate the code path only; they say nothing about the Korean market.
+- **`--quick` vs `--top-k`:** `--quick` keeps ~91 stocks per month but `--top-k` defaults to 200, so every model holds
+  the whole universe and CAGR / Sharpe / MDD / Precision@K in `report.md` and `metrics.csv` are identical across
+  models (a warning is printed and written into `report.md`). Use `--top-k 20`, or compare AUC and
+  `compare_runs.py` (it re-selects the top 20 % from the stored scores). The original design is the whole KOSPI
+  (`--top-n-mcap 0`, ~650 stocks) holding 200 against the official KOSPI200 equal-weight index.
+- **News data:** one outlet (Maeil Business securities section) via BigKinds, title + 200-character summary, publication
+  date only (no time of day, which is why daily results are shown with entry timing A and B), ends 2025-12-31.
