@@ -11,6 +11,11 @@ import evaluation as ev
 assert ev.select_k(650, 200) == 200 and ev.select_k(150, 200) == 150      # count, capped at the universe
 assert ev.select_k(650, 0.2) == 130 and ev.select_k(3, 0.2) == 1           # fraction
 
+# --top-k at least as large as the smallest month means the whole universe is held every month (all models identical)
+assert ev.top_k_covers_universe(200, 91) and ev.top_k_covers_universe(91, 91)
+assert not ev.top_k_covers_universe(200, 610) and not ev.top_k_covers_universe(20, 91)
+assert not ev.top_k_covers_universe(0.2, 91) and not ev.top_k_covers_universe(0, 91)    # fractions / unset never trigger
+
 rng = np.random.default_rng(0)
 rows = []
 for d in pd.to_datetime(["2023-01-31", "2023-02-28"]):

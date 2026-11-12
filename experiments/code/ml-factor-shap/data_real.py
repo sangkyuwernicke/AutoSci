@@ -31,7 +31,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from config import EXTENDED_FACTORS, MACRO
+from config import EXTENDED_FACTORS, MACRO, SENTIMENT_FACTORS
+from sentiment import monthly_sentiment_features
 from universe import apply_exclusions, coverage_filter
 
 FLOWS = ["sales", "gross_profit", "op_income", "net_income", "cfo", "interest_expense", "depreciation", "capex"]
@@ -135,6 +136,23 @@ def _forward_factors(panel, cons_path, lag_days=0):
     return p
 
 
+def _sentiment_factors(panel, path, lag_days=1):
+    """Left-join the monthly news-sentiment factors; rows are never added or dropped. A missing file is an error
+    (a silent no-op would let a run pass as 'with sentiment' while using none)."""
+    if not Path(path).exists():
+        raise FileNotFoundError(f"{path} not found; create it with prepare_sentiment.py")
+    daily = pd.read_parquet(path)
+    last = pd.to_datetime(daily["date"]).max()
+    uncovered = sorted(d for d in panel["date"].unique() if pd.Timestamp(d) - pd.Timedelta(days=lag_days) > last)
+    if uncovered:                                            # absent data would look like "no news" to the model
+        print(f"[sentiment] WARNING: {len(uncovered)} month(s) after the last news date {last:%Y-%m-%d} "
+              f"({pd.Timestamp(uncovered[0]):%Y-%m} ...) have no sentiment data; keep --test-end before them")
+    feats = monthly_sentiment_features(daily, pd.DatetimeIndex(sorted(panel["date"].unique())),
+                                       panel["ticker"].unique(), lag_days=lag_days)
+    feats["date"] = feats["date"].astype(panel["date"].dtype)
+    return panel.merge(feats, on=["ticker", "date"], how="left")
+
+
 def _price_block_daily(raw):
     """prices.parquet (daily) -> month-end features + month-end market info."""
     px = pd.read_parquet(raw / "prices.parquet")
@@ -194,7 +212,7 @@ PRICE_FACTORS = ["SIZE", "RET_1M", "RET_3M", "RET_6M", "RET_12M", "MOM_12_1", "D
 
 
 def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.5, top_n_mcap=0, market=None,
-                price_only=False):
+                price_only=False, sentiment=None, sentiment_lag_days=1):
     """market: "KOSPI" / "KOSDAQ" restricts both the universe and the benchmark index; None keeps both.
     price_only: skip fundamentals / macro / consensus (they need DART, ECOS) and return price-based factors plus
     SIZE = log(market cap) for the whole eligible universe -- used by factor_ic.py to check signals on ~2,500 names."""
@@ -289,8 +307,11 @@ def build_panel(raw_dir, min_mcap_pct=0.0, consensus_lag_days=0, min_coverage=0.
                              direction="backward").rename(columns={"value": name}).drop(columns="avail_date")
     panel = panel.merge(grid.drop(columns="asof"), on="date", how="left")
 
+    if sentiment:                                            # opt-in news-sentiment factors (sentiment.py)
+        panel = _sentiment_factors(panel, raw / f"sentiment_{sentiment}.parquet", sentiment_lag_days)
+
     panel = panel.dropna(subset=["ret_next", "mkt_next"] + MACRO)
     panel = coverage_filter(panel, min_coverage)
-    feats = [c for c in EXTENDED_FACTORS if c in panel.columns]
+    feats = [c for c in EXTENDED_FACTORS + SENTIMENT_FACTORS if c in panel.columns]
     extra = [c for c in ("mcap",) if c in panel.columns]               # evaluation only (KOSPI200 proxy), never a model input
     return panel[["date", "ticker"] + feats + MACRO + ["ret_next", "mkt_next"] + extra].reset_index(drop=True)

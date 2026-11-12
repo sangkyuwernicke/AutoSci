@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
 
-from config import FACTOR_SETS, INVERT_BEFORE_RANK
+from config import FACTOR_SETS, INVERT_BEFORE_RANK, SENTIMENT_FACTORS, SENTIMENT_SOURCES
 
 
 def monthly_rank_ic(panel, factors, min_n=20):
@@ -34,6 +34,37 @@ def monthly_rank_ic(panel, factors, min_n=20):
             r[f] = spearmanr(x[ok], g.loc[ok, "excess"])[0] if ok.sum() >= min_n and x[ok].nunique() > 1 else np.nan
         rows[d] = r
     return pd.DataFrame(rows).T.sort_index()
+
+
+def add_residuals(panel, factors, controls, min_extra=5):
+    """Add `<factor>_RES`: the part of each factor not explained by `controls`, per month and cross-sectionally.
+
+    Within a month, among stocks with a value for the factor and every control, the factor's percentile rank is
+    regressed (OLS with intercept) on the controls' percentile ranks and the residual is kept; other stocks stay NaN.
+    Ranks are re-taken on that subset, so the residual is exactly orthogonal to the controls' ranks. Months with
+    fewer than len(controls) + min_extra usable stocks are left NaN. Returns a copy; the input is not modified."""
+    out = panel.reset_index(drop=True)
+    for f in factors:
+        out[f"{f}_RES"] = np.nan
+    need = len(controls) + min_extra
+    for _, idx in out.groupby("date").indices.items():
+        g = out.iloc[idx]
+        for f in factors:
+            ok = g[f].notna() & g[list(controls)].notna().all(axis=1)
+            if ok.sum() < need:
+                continue
+            sub = g.loc[ok]
+            y = sub[f].rank(pct=True).to_numpy()
+            X = np.column_stack([np.ones(len(sub))] + [sub[c].rank(pct=True).to_numpy() for c in controls])
+            beta = np.linalg.lstsq(X, y, rcond=None)[0]
+            out.loc[sub.index, f"{f}_RES"] = y - X @ beta
+    return out
+
+
+def avg_stocks_per_month(panel, factors):
+    """Mean over months of the number of stocks with a non-missing value, per factor. For sparse factors (news
+    sentiment exists only for stocks that had news) the IC is computed on this subset, not on the whole universe."""
+    return panel.groupby("date")[list(factors)].count().mean()
 
 
 def newey_west_t(x, lag=3):
@@ -70,6 +101,14 @@ def main():
     ap.add_argument("--top-n-mcap", type=int, default=0)
     ap.add_argument("--min-coverage", type=float, default=0.5)
     ap.add_argument("--start-date", default=None)
+    ap.add_argument("--end-date", default=None,
+                    help="drop feature dates after this (YYYY-MM-DD); use 2025-12-31 with --sentiment, the news ends there")
+    ap.add_argument("--sentiment", choices=["none", *SENTIMENT_SOURCES], default="none",
+                    help="real: also test the news-sentiment factors (data/real/sentiment_<src>.parquet)")
+    ap.add_argument("--sentiment-lag-days", type=int, default=1)
+    ap.add_argument("--residualize-on", nargs="+", default=None, metavar="FACTOR",
+                    help="also report the IC of each sentiment factor after removing, month by month, what these "
+                         "factors (e.g. RET_1M RET_3M) explain: does sentiment add anything beyond them?")
     ap.add_argument("--n-stocks", type=int, default=300, help="synthetic only")
     a = ap.parse_args()
 
@@ -81,17 +120,30 @@ def main():
     else:
         from data_real import PRICE_FACTORS, build_panel
         panel = build_panel(a.raw_dir, min_coverage=a.min_coverage, top_n_mcap=a.top_n_mcap,
-                            market=None if a.market == "ALL" else a.market, price_only=a.price_only)
+                            market=None if a.market == "ALL" else a.market, price_only=a.price_only,
+                            sentiment=None if a.sentiment == "none" else a.sentiment,
+                            sentiment_lag_days=a.sentiment_lag_days)
     if a.start_date:
         panel = panel[panel["date"] >= pd.Timestamp(a.start_date)]
+    if a.end_date:
+        panel = panel[panel["date"] <= pd.Timestamp(a.end_date)]
     panel = panel.dropna(subset=["ret_next", "mkt_next"])
     factors = ([c for c in PRICE_FACTORS if c in panel.columns] if a.price_only
                else [c for c in FACTOR_SETS[a.factor_set] if c in panel.columns])
+    sent_cols = [c for c in SENTIMENT_FACTORS if c in panel.columns]
+    factors += sent_cols
+    if a.residualize_on:
+        absent = [c for c in a.residualize_on if c not in panel.columns]
+        if absent or not sent_cols:
+            raise SystemExit(f"--residualize-on needs --sentiment and controls present in the panel (missing: {absent})")
+        panel = add_residuals(panel, sent_cols, a.residualize_on)
+        factors += [f"{c}_RES" for c in sent_cols]
     n = panel.groupby("date").size()
     print(f"{len(panel):,} stock-months, {panel.ticker.nunique()} tickers, {n.min()}-{n.max()} stocks/month, "
           f"{panel['date'].nunique()} months")
     ic = monthly_rank_ic(panel, factors)
     res = summarize(ic)
+    res.insert(1, "avg_n", avg_stocks_per_month(panel, factors).reindex(res.index))
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     ic.to_csv(out / "monthly_ic.csv"); res.to_csv(out / "factor_ic_summary.csv")
     print(res.to_string(float_format=lambda x: f"{x:.3f}"))

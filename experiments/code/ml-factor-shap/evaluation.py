@@ -53,6 +53,13 @@ def _weights(top, rest_max, weighting):
     return pd.Series(raw / raw.sum() if raw.sum() > 0 else np.full(len(s), 1.0 / len(s)), index=top["ticker"].values)
 
 
+def top_k_covers_universe(top, n_min):
+    """True when `top` is a count (>= 1) not smaller than the smallest monthly universe `n_min`: select_k then caps it
+    at the universe, the portfolio is the whole universe every month, and every model gets the same CAGR / Sharpe /
+    Precision@K. Fractions (< 1) and 0 (unset) never trigger."""
+    return top >= 1 and top >= n_min
+
+
 def backtest(pred, top_q=0.2, cost=0.002, weighting="equal"):
     """Top-`top_q` (fraction if < 1, else number of stocks) portfolio formed at each month-end t, held over month t+1.
     `weighting`: equal (default), prob or excess (see _weights).

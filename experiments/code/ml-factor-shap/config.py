@@ -20,6 +20,10 @@ GROWTH_INVEST = ["RD_INTENSITY", "RD_GROWTH", "CAPEX_INTENSITY", "ASSET_GROWTH"]
 FORWARD_FACTORS = ["FWD_PER", "FWD_EPS_GROWTH", "FWD_SALES_GROWTH", "EST_REVISION_3M"]
 EXTENDED_FACTORS = BASE_FACTORS + MOMENTUM_EXTRA + GROWTH_INVEST + FORWARD_FACTORS
 FACTOR_SETS = {"base": BASE_FACTORS, "extended": EXTENDED_FACTORS}
+# News-sentiment features (sentiment.py). Opt-in via --sentiment; appended to the firm factors, never forward-filled
+# (no news is missing information, not a stale value) and never dropped by --max-missing.
+SENTIMENT_FACTORS = ["SENT_MEAN_1W", "SENT_MEAN_1M", "SENT_MEAN_3M", "SENT_CHG", "SENT_STD_1M", "NEWS_COUNT_1M"]
+SENTIMENT_SOURCES = ["finbert"]                          # data/real/sentiment_<source>.parquet (KR-FinBert-SC only)
 FIRM_FACTORS = BASE_FACTORS          # default (the plan's original 17)
 
 MACRO = ["BASE_RATE", "TERM_SPREAD", "CPI_YOY", "KRWUSD", "VKOSPI"]

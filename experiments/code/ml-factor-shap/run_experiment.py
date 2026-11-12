@@ -31,7 +31,7 @@ from sklearn.metrics import roc_auc_score
 
 import evaluation as ev
 import shap_analysis as sa
-from config import FACTOR_SETS, MACRO, MODELS, REGIME_VARS
+from config import FACTOR_SETS, MACRO, MODELS, REGIME_VARS, SENTIMENT_FACTORS, SENTIMENT_SOURCES
 from features import add_target, impute_ffill, cross_sectional_transform, macro_to_regime
 from models import build, score, tune
 
@@ -61,6 +61,13 @@ def parse():
                    help="y=1 iff R_i - R_m > margin (e.g. 0.03 for a rarer positive class)")
     a.add_argument("--factor-set", choices=list(FACTOR_SETS), default="base",
                    help="base = plan's 17 factors; extended adds momentum/R&D/capex/forward-looking factors")
+    a.add_argument("--sentiment", choices=["none", *SENTIMENT_SOURCES], default="none",
+                   help="real data: append news-sentiment factors (data/real/sentiment_<src>.parquet, see "
+                        "prepare_sentiment.py) to the firm factors. Months without news stay missing (median after "
+                        "the rank transform) and are never forward-filled")
+    a.add_argument("--sentiment-lag-days", type=int, default=1,
+                   help="news dated within this many days before the month-end is ignored (default 1: month-end "
+                        "day itself, which may be published after the close)")
     a.add_argument("--min-mcap-pct", type=float, default=0.0, help="real data: drop the smallest x%% by market cap each month")
     a.add_argument("--min-coverage", type=float, default=0.5,
                    help="real data: drop stock-months with < this share of the 13 statement-based factors")
@@ -118,7 +125,9 @@ def load(args):
     from data_real import build_panel
     return build_panel(args.raw_dir, min_mcap_pct=args.min_mcap_pct, min_coverage=args.min_coverage,
                        top_n_mcap=args.top_n_mcap,
-                       market=None if args.market == "ALL" else args.market)
+                       market=None if args.market == "ALL" else args.market,
+                       sentiment=None if args.sentiment == "none" else args.sentiment,
+                       sentiment_lag_days=args.sentiment_lag_days)
 
 
 def fmt(df, nd=4):
@@ -154,6 +163,13 @@ def main():
     firm_cols = kept
     print("residual missing share (median-imputed after rank transform): "
           f"{raw[firm_cols].isna().mean().mean():.3%}")
+    # Sentiment joins AFTER the ffill/max-missing step: a month without news is "no information", not the last
+    # month's tone, and most stocks lack news in most months, so the max-missing rule would remove it entirely.
+    sent_cols = [c for c in SENTIMENT_FACTORS if c in raw.columns] if args.sentiment != "none" else []
+    if sent_cols:
+        firm_cols = firm_cols + sent_cols
+        print(f"sentiment={args.sentiment} (lag {args.sentiment_lag_days}d): stock-months with news in the last 30d "
+              f"{(raw['NEWS_COUNT_1M'] > 0).mean():.1%}")
     panel = add_target(raw, args.target_margin, args.target_quantile,
                        direction=(args.target == "direction" and args.target_quantile is None
                                   and args.target_margin == 0.0))
@@ -252,6 +268,14 @@ def main():
     # ── Prediction metrics + backtest ─────────────────────────────────────────
     if args.top_k:
         args.top_q = float(args.top_k)                       # evaluation.select_k reads >= 1 as a count
+    n_min = int(pred.groupby(["model", "fset", "date"]).size().min())
+    topk_warning = None
+    if ev.top_k_covers_universe(args.top_q, n_min):
+        topk_warning = (f"WARNING: --top-k {args.top_k} >= the smallest test month ({n_min} stocks), so every model "
+                        f"holds the whole universe each month: CAGR, Sharpe, MDD and Precision@K below are identical "
+                        f"across models and say nothing about model quality (AUC is unaffected). Use a smaller "
+                        f"--top-k (e.g. 20) or --top-k 0 --top-q 0.2.")
+        print(topk_warning)
     months = pd.DatetimeIndex(sorted(pred["date"].unique()))
     # Primary benchmark: official KOSPI200 equal-weight (same weighting as the model portfolios); falls back to the
     # cap-weighted market index of the universe when the KRX file is absent. WinRate_vs_bm / Excess_mo use it.
@@ -430,8 +454,9 @@ def main():
         "inputs; Firm+Macro (gating) = macro variables only set the factor weights (stored as firm / full / gated in "
         "metrics.csv).", "",
         "## Resolving power", power_note, "",
+        *([topk_warning, ""] if topk_warning else []),
         f"settings: small_data={args.small_data} macro_mode={args.macro_mode} "
-        f"macro_role={args.macro_role} factor_set={args.factor_set} "
+        f"macro_role={args.macro_role} factor_set={args.factor_set} sentiment={args.sentiment} "
         f"market={args.market} top_n_mcap={args.top_n_mcap}", "",
         h1_title, "```", fmt(h1, 5), "```", "",
         "## H2: Sharpe(model) - Sharpe(logit), block bootstrap", "```",
