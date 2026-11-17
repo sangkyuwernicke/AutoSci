@@ -1,0 +1,19 @@
+numpy
+pandas>=2.2
+scipy
+scikit-learn
+lightgbm
+xgboost
+catboost
+optuna
+shap
+matplotlib
+pyarrow
+# real-data collection only (fetch_real_data.py)
+opendartreader
+requests
+# news sentiment panel (BigKinds .xlsx → build_news_sentiment_panel.py)
+openpyxl
+# Only to RE-RUN KR-FinBert-SC scoring (build_news_sentiment_panel.py --method model; ~0.5 GB model download,
+# GPU/MPS recommended). Not needed to run experiments from the stored data/real/sentiment_finbert.parquet:
+#   pip install torch transformers

@@ -1,0 +1,16 @@
+{
+  "_note": "DRAFT. Intended rule: the 10 largest KOSPI common stocks by market cap on 2024-01-02, fixed ex ante. This list is an approximation from memory, NOT verified; confirm the ranking with pykrx (get_market_cap on 2024-01-02) before the Stage 1 run and edit if needed.",
+  "kospi": [
+    {"ticker": "005930.KS", "name": "Samsung Electronics"},
+    {"ticker": "000660.KS", "name": "SK Hynix"},
+    {"ticker": "373220.KS", "name": "LG Energy Solution"},
+    {"ticker": "207940.KS", "name": "Samsung Biologics"},
+    {"ticker": "005380.KS", "name": "Hyundai Motor"},
+    {"ticker": "005490.KS", "name": "POSCO Holdings"},
+    {"ticker": "000270.KS", "name": "Kia"},
+    {"ticker": "006400.KS", "name": "Samsung SDI"},
+    {"ticker": "035420.KS", "name": "NAVER"},
+    {"ticker": "068270.KS", "name": "Celltrion"}
+  ],
+  "us_control": ["AAPL", "GOOGL", "AMZN"]
+}

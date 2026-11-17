@@ -1,0 +1,49 @@
+pilot:
+  slug: global-linkage-channel-ablation-blanket-index
+  seed: 1
+
+data:
+  kospi_tickers:
+    samsung: "005930.KS"
+    sk_hynix: "000660.KS"
+    kodex200: "069500.KS"
+  index_tickers:
+    kospi_index: "^KS11"
+    nasdaq100: "^NDX"
+    sox: "^SOX"
+    vix: "^VIX"
+    usdkrw: "KRW=X"
+  history_period: "6mo"
+  cache_dir: "data"
+
+windows:
+  correlation_lookback_days: 60
+  decision_window_days: 40
+  technical_sma_short: 5
+  technical_sma_long: 20
+  technical_rsi_period: 14
+
+mechanistic_weights:
+  # Approximate KOSPI free-float market-cap weights for the two globally-exposed
+  # constituents, renormalized to sum to 1 across just these two names. Pilot-level
+  # approximation (not fetched live) — the full study should source exact free-float
+  # weights from KRX.
+  samsung: 0.65
+  sk_hynix: 0.35
+
+execution:
+  transaction_cost_bps: 20  # 0.20%
+  long_only: true
+  fallback_action: "HOLD"
+  fallback_position_fraction: 0.0
+  max_llm_retries: 1
+
+conditions:
+  - D0
+  - D6a
+  - D6b
+
+llm:
+  temperature: 0.2
+  max_tokens: 400
+  request_timeout_s: 60
