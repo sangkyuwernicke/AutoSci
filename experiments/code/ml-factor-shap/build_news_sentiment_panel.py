@@ -38,10 +38,12 @@ PARTICLES = "은는이가을를의에도와과로"
 STOP_NAMES = frozenset({"대상"})
 
 
-def load_articles(years: list[int]) -> pd.DataFrame:
+def load_articles(years: list[int], outlet: str = "매일경제") -> pd.DataFrame:
+    """BigKinds 연도별 엑셀 → 기사. outlet = 매일경제 | 서울경제 | 한국경제 (data/news/<outlet>_증권증시_연도별)."""
     frames = []
+    news_dir = NEWS_DIR.parent / f"{outlet}_증권증시_연도별"
     for y in years:
-        path = NEWS_DIR / f"빅카인즈_매일경제_증권증시_{y}.xlsx"
+        path = news_dir / f"빅카인즈_{outlet}_증권증시_{y}.xlsx"
         if not path.exists():
             print(f"[warn] 파일 없음: {path}", file=sys.stderr)
             continue
@@ -202,6 +204,8 @@ def main() -> int:
     ap.add_argument("--method", choices=["lexicon", "model", "both"], default="model",
                     help="model(default): KR-FinBert-SC, the sentiment index used by the experiment. lexicon/both are "
                          "kept only for the method-comparison study (both -> <out>/lexicon, <out>/finbert)")
+    ap.add_argument("--outlet", default="매일경제", choices=["매일경제", "서울경제", "한국경제"],
+                    help="which BigKinds outlet folder to read (data/news/<outlet>_증권증시_연도별)")
     ap.add_argument("--prices", default="data/real/prices.parquet")
     ap.add_argument("--marcap-dir", default="data/marcap/data")
     ap.add_argument("--snap-dir", default="data/krx/snapshots")
@@ -209,7 +213,7 @@ def main() -> int:
     args = ap.parse_args()
 
     out = Path(args.out_dir)
-    base = load_articles(args.years)
+    base = load_articles(args.years, args.outlet)
     print(f"articles(dedup)={len(base)}  years={args.years[0]}~{args.years[-1]}")
     uni = load_universe(Path(args.prices), Path(args.marcap_dir), Path(args.snap_dir))
     print(f"universe: tickers={uni.ticker.nunique()} names={uni.name.nunique()}")
